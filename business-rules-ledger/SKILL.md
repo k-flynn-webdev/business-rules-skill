@@ -1,0 +1,806 @@
+---
+name: "business-rules-ledger"
+description: Capture product intents, business rules and their tests in a business rules ledger — a living, grep-able source of truth that code and tests conform to, with each rule's enforcement computed from the code. Use whenever the user wants to write down a rule, decision, invariant or intent ("add a rule", "write this down", "how should this behave", "what's the rule for X"); describes what the system should or shouldn't do while working on tickets, bugs or features; asks for a spec, requirements or acceptance criteria; wants a ledger built from a codebase; or mentions a rules ledger, intents, br- IDs or rule-driven development. Also use for "grill me" or settling open rules; "intent review" or confirming observed rules; "fresh eyes" or reviewing the ledger; asking which rules are enforced, what's left, or to check the ledger against the code; and "read me the rules", "audio" or "listen". Prefer this over a prose spec.
+metadata:
+  version: "2.5.0"
+---
+
+# Business Rules Ledger
+
+Version 2.5.0. See the changelog at the end.
+
+A ledger of intents and the numbered rules that serve them. An intent says what a user should be
+able to do and what would feel broken. A rule is one decision, stated in one or two sentences,
+with tests that prove it and a cited source that explains why it exists. Code and tests conform
+to the ledger, not the other way round.
+
+This replaces the spec as the place where decisions live. A spec describes a system in prose that
+nobody can falsify, and once the system is built nobody re-reads it. A ledger makes many small
+claims that each pass or fail on their own. The code cites them, and a checker reports which ones
+the code actually enforces. Disagreement resolves against a test instead of an interpretation.
+Drift shows up as a state change in the index, not as a surprise in production. A spec can still
+sit alongside the ledger as the readable overview of an area — see _Specs alongside the ledger_.
+
+Assets:
+
+- `assets/ledger-template.md` — the empty document. Copy it when starting a new ledger.
+- `assets/business-rules-authoring.md` — the authoring rules (br-M). Installs as `BUSINESS-RULES-AUTHORING.md`
+  in the same folder as the ledger, usually `specs/`.
+- `assets/ledger-check.ts` — the enforcement checker and linter. Installs as `scripts/ledger-check.ts`.
+- `assets/audio-ledger.ts` — the listening script. Installs as `scripts/audio-ledger.ts`.
+
+## The layers
+
+1. **Intents** (`in-01`) — what a user should be able to do, who they are, what broken looks
+   like, and what we deliberately do not do. Written first. Change rarely.
+2. **Glossary** — every domain term, defined once.
+3. **Rules** (`br-B03`) — decisions that serve intents. Each has a kind: definition, invariant,
+   or behaviour.
+4. **Design notes** — mechanism, attached to the rule it implements. Not rules. Not tested as rules.
+5. **Enforcement** — computed from the code by the checker. The checker builds the index from the
+   rules, so nothing in it is written twice.
+
+Intents answer _why_. Rules answer _what_. Design notes answer _how_. Enforcement answers _is it
+true yet_. Keep each question in its own layer.
+
+## The authoring rules
+
+These govern every rule written. They ship as `assets/business-rules-authoring.md`. Install that file
+word for word as `BUSINESS-RULES-AUTHORING.md` next to the ledger, so any reader — person or agent, with
+or without this skill — can find the standard in the repo.
+
+Do not copy the authoring rules into the ledger, and do not list them in its index. A reader
+needs to know how to read a rule; only a writer needs the rules for writing one. The ledger
+carries the short _How to read this ledger_ section from the template, which ends by pointing
+writers at `BUSINESS-RULES-AUTHORING.md`.
+
+- **br-M01** — Record one decision per rule. Split the rule where the parts can be falsified separately. A part that fails for its own reason is its own rule.
+- **br-M02** — Use the terms the domain uses. Use a technical term when it is the correct name for the thing.
+- **br-M03** — Write plain technical English. Short sentences. Active voice.
+- **br-M04** — Give each rule a kind. A definition says what a concept is, as a function of stored facts. An invariant says what is always true. A behaviour says what happens on an event. Write definitions and invariants as plain assertions. Write behaviours as When [condition], then [outcome], with the condition first.
+- **br-M05** — Give one instruction per step.
+- **br-M06** — Cite the source of every rule and every change. Name the conversation, ticket, or URL.
+- **br-M07** — Keep each rule to two sentences. A rule that needs more is more than one rule. When it genuinely cannot split, write a compound: line saying why.
+- **br-M08** — Tag each rule, and each intent where it helps. Tags cross the areas that IDs do not.
+- **br-M09** — Write each rule's statement, serves, tags and status once, in its entry. The checker builds the index from the entries: every rule except the authoring rules (br-M), never dropping one. Never edit the index by hand.
+- **br-M10** — Mark a rule observed when it was read from existing code and the owner has not confirmed it. Mark it open while any question about it is unanswered, and write the questions under the rule. Mark it settled only when every question has an answer. Mark it retired when it no longer applies, and keep the entry.
+- **br-M11** — Write tests for an open rule. Expect them to change. Do not treat an open rule as a decision.
+- **br-M12** — Cite the rule wherever the code enforces it, as the ID followed by a colon (`br-B03:`) or after `@see`. Use the language's documentation comment when the code is a function or a type. Mention a rule anywhere else without the colon; only citations count as enforcement.
+- **br-M13** — Name each test in code after its test ID, with the br- prefix: br-B03.1. The ID goes in the test name, not in a comment.
+- **br-M14** — Cite the rule, not the document. Write br-B03. Do not write "see the rules doc".
+- **br-M15** — _Retired in 2.5.0._ Previously: record every change in a table at the head of the document. A rule's history lives in its source lines, and the document's in git.
+- **br-M16** — _Retired in 2.5.0._ Previously: keep the twenty most recent changes at the head. Retired with br-M15.
+- **br-M17** — Write each test as three sentences. Given [starting state]. When [event]. Then [outcome]. When a rule has an examples or decision table, each row is a test: give it the test ID in the first column, and do not write it again as a sentence. End each rule's tests with one Fails if line, written as a blockquote (`> Fails if …`) to distinguish it visually from the numbered tests.
+- **br-M18** — Write only rule IDs in a rule's given line. Write only a state in a test's Given. When a test needs a rule as its state, write Given br-B03 holds.
+- **br-M19** — Mark a rule attended: required when an agent must not implement or change it without the owner present. Omit the field otherwise. Give the reason in the source.
+- **br-M20** — Write the intents before the rules. Give every rule a serves: line naming the intents it protects. A rule that serves no intent is missing an intent or should not exist.
+- **br-M21** — Write a non-goal on an intent when a reasonable person might build the opposite. Non-goals settle arguments as quickly as goals.
+- **br-M22** — Keep mechanism out of rules. If a user or product owner would not notice the change, write it as a design note under the rule it implements. When another document owns the detail, such as a visual or technical spec, the design note points at it and does not restate it, so a change there needs no ledger edit.
+- **br-M23** — When a derived value is stored, write its definition as one rule and the stored value's agreement with it as one invariant. Test the invariant by recomputing from scratch.
+- **br-M24** — Define each domain term once in the glossary. Use it exactly as defined. Do not use a synonym.
+- **br-M25** — Use a decision table when the outcome depends on more than two conditions. Every row is a test, with its test ID in the first column (br-M17).
+- **br-M26** — Give worked examples for any rule involving dates, counts, or arithmetic. Each example is an input and its exact output, and a test with its own ID (br-M17).
+- **br-M27** — Test every threshold just below, at, and just above it.
+- **br-M28** — Record a known divergence between a rule and the code in a gap: line. Delete the line when the code conforms.
+- **br-M29** — Never hand-write the index. The checker builds it from the rule entries, with enforcement computed from the code.
+- **br-M30** — Let a spec describe, never decide. A spec names the intents it serves, and every decision it states cites the rule that holds it. A decision with no rule ID is a missing rule.
+- **br-M31** — When a rule's number is a setting the owner may tune, state the default in the rule, name the config key in a design note, and state the number in the tests. A wrong config change then fails a test instead of quietly changing the rule.
+
+## IDs
+
+Rules: `br-` + area letter + two digits. `br-B03`. Tests take `B03.1`, `B03.2` in the ledger, and
+`br-B03.1`, `br-B03.2` in the test name in code (br-M13). The prefix is what the checker and grep find.
+Intents: `in-` + two digits. `in-02`.
+
+Default areas: **M** how to write rules, **B** business, **U** interface, **A** API, **D** data.
+Add a letter when a rule needs it, not in anticipation. Keep the registry table current.
+
+Retire an ID. Never reuse one — rule or intent. A reused ID makes every earlier commit and
+conversation lie.
+
+## Intents
+
+An intent is the outcome a group of rules protects, stated from the user's side. It is the part of
+the ledger that tells a future reader whether a rule still earns its place.
+
+The parts of an intent:
+
+1. **The statement.** One sentence. "A user can …" or "A [role] never …". An outcome a user
+   would notice, not a feature and not a rule in disguise. "Streaks reset at midnight UTC" is a
+   rule. "A user is rewarded for consistency without being punished mid-day" is an intent.
+2. **for:** who it is for. A role or a kind of user, not a persona essay.
+3. **broken when:** one concrete moment where the user would feel it is broken. This is the
+   intent's Fails if. If you cannot write it, the intent is too vague.
+4. **non-goal:** optional, repeatable. Something a reasonable person might build that we
+   deliberately do not (br-M21).
+5. **status:** `observed` when drafted from code and unconfirmed, otherwise `settled`.
+6. **Source.** As for rules.
+
+A product usually has three to ten intents. Twenty is a sign that rules are being written as
+intents. One is a sign that the intents are too broad to say no to anything.
+
+**When an intent changes**, list every rule that serves it and ask whether each still holds —
+exactly as for a changed given. **When an intent is retired**, every rule serving only it is a
+candidate for retirement. Ask; do not retire automatically.
+
+**When a rule serves no intent**, do not invent one to fill the field. Ask: which user outcome
+breaks if this rule is wrong? If the answer is none, the rule is mechanism (br-M22) or should not
+exist. If the answer is real but unwritten, write the intent.
+
+## Capturing a rule
+
+Work from what the user has already said before asking. They are usually describing behaviour
+while looking at a ticket or a screen, not answering an interview. Draft the rule from their
+words, show it, and ask only about what is genuinely missing.
+
+Before writing, run three quick checks:
+
+- **The intent check.** Which intent does this serve? If none fits, stop and settle that first.
+- **The notice check.** Would a user or product owner notice if this changed? If not, it is a
+  design note, not a rule (br-M22).
+- **The glossary check.** Is every domain term in the glossary, used exactly as defined? Add or
+  reuse before writing. Undefined terms are where two readers draw different conclusions.
+
+The parts of a rule:
+
+1. **kind.** `definition`, `invariant`, or `behaviour` (br-M04). Ask for a When/Then: can this
+   condition ever be false in a valid system state? If another rule already makes it always true,
+   the rule is an invariant, not a behaviour.
+2. **The statement.** One or two sentences (br-M07). If it needs "and", check whether the halves
+   can fail for different reasons — if so, it is two rules.
+3. **Area and ID.** Put the ID where the rule is _enforced_. When a business rule shows up in
+   three places, the business rule holds the truth and the others take it as a given.
+4. **serves.** The intent IDs it protects. Usually one.
+5. **given.** The rules this one assumes are true. Children point at parents, never the reverse.
+   If a given stops holding, this rule's tests are suspect.
+6. **Tags.** Lowercase letters, digits and hyphens; no other punctuation. Tags cut across areas —
+   `liability` may pull rules from B, U and D, which is the view someone wants during an incident.
+   Write them on the line under the statement as `` `#liability` ``; the checker copies them into
+   the index. An intent carries tags the same way, on the line
+   under its statement. A tag can also mark what should leave the project: tag the rules and
+   intents that a template or another product ought to keep with one shared tag, such as
+   `boilerplate`, and `npx tsx scripts/ledger-check.ts --tag=boilerplate` lists them.
+7. **Examples or decision table.** Required for dates, counts and arithmetic (br-M26) and for
+   more than two conditions (br-M25). See _Complex areas_. Each row is a test: its first column
+   is the test ID (`B07.1`), and it is not written again under Tests (br-M17).
+8. **Tests.** Given [starting state]. When [event]. Then [outcome]. Write here only the tests
+   that are not already a row of the examples table. The rule's `given:` line
+   holds rule IDs only; a test's Given holds a state in words. Every threshold gets tests just
+   below, at, and just above (br-M27). End with one Fails if blockquote — the condition that
+   proves the rule broken. Without it tests drift into describing the implementation.
+9. **Design notes.** Optional. The mechanism that implements the rule, when it is worth
+   recording. Design notes can change without a ledger change to the rule. When another document
+   owns the detail (a visual spec, an API spec), point at it rather than restate it, so a change
+   to how something looks or is built needs no ledger edit at all (br-M22).
+10. **Source.** A date and a citation. Ask for the date the decision was _made_, not today's.
+11. **Status.** `observed`, `open`, `settled`, or `retired` (br-M10).
+12. **Optional fields.** `attended: required` for risk (see _Attended rules_). `gap:` for a known
+    divergence (br-M28). `compound:` when a rule cannot split (br-M07).
+
+## Complex areas
+
+Long rules are where the bugs hide. A paragraph-length rule usually mixes a definition, a
+lifecycle and a few behaviours, and the contradictions sit between them. Use this pattern for any
+area where rules keep growing: streaks, pricing, availability, eligibility, scheduling.
+
+1. **Find the concept and define it once.** Write a `definition` rule that says what the concept
+   is as a pure function of stored facts. Not how it is updated — what it is.
+   > A streak is a maximal run of consecutive UTC days, each with at least one non-deleted track.
+2. **Pin the definition with worked examples.** A small table of inputs and exact outputs. This
+   ends off-by-one arguments before they start.
+
+   | Test  | Days with tracks                    | Streaks                 |
+   | ----- | ----------------------------------- | ----------------------- |
+   | B06.1 | 1, 2, 3, 5                          | 1–3 (3 days), 5 (1 day) |
+   | B06.2 | 1, 2, 3; day 2's only track deleted | 1 (1 day), 3 (1 day)    |
+
+   Each row is a test, so the rule does not repeat these as Given/When/Then lines (br-M17).
+
+3. **State the properties as invariants.** Things that must always hold, independent of how the
+   value is computed. "Deleting a track never lengthens any streak." "Two tracks on one day count
+   as one day." Invariants make the best generated tests.
+4. **If the value is stored, write one consistency invariant** (br-M23): the stored records equal
+   the definition recomputed from scratch. The update steps — when records open, close, split —
+   become design notes under this invariant. Test it by generating random histories of creates
+   and deletes and comparing the stored result to a fresh recomputation. One invariant replaces a
+   page of lifecycle rules and catches the cases they missed.
+5. **Behaviours reference the concept through given.** "When a track is created and the current
+   streak is at least the threshold, then …" takes the definition as a given and restates nothing.
+6. **Branching output becomes a decision table** (br-M25). Each row is a test. Writing the table
+   exposes the rows nobody decided.
+
+   | Test  | Exact match? | Tracks within ±3 days | Shown           |
+   | ----- | ------------ | --------------------- | --------------- |
+   | B10.1 | yes          | any                   | the exact track |
+   | B10.2 | no           | 0                     | bar hidden      |
+   | B10.3 | no           | 1–2                   | those tracks    |
+   | B10.4 | no           | 3 or more             | the 2 closest   |
+
+When reviewing or capturing, treat these as the smell: a rule over two sentences, a formula
+restated in two rules, a term like "length" or "active" used without a glossary entry, or tests
+that describe steps rather than outcomes. Each one says the area has not been split into
+definition, invariants and behaviours yet.
+
+## Specs alongside the ledger
+
+A spec is welcome alongside the ledger, as long as it integrates with it. Some areas read best as
+prose first — a feature with several moving parts, a flow across screens, a migration plan. The
+spec gives the overview: what the area is for, how its parts fit, what a reader should look at
+first. The intents and rules underneath hold every decision, so nothing in the spec can be read
+two ways (br-M30).
+
+A spec integrates well when:
+
+- **It names the intents it serves**, at the top. If no intent fits, write the intent first.
+- **Every decision it states cites the rule that holds it.** "Streaks count UTC days (br-B06)."
+  Explanation, context and diagrams need no citation; decisions do.
+- **It restates nothing.** Cite the rule rather than copying its wording, so an amendment
+  happens in one place.
+- **It defers on conflict.** When a spec and the ledger disagree, the ledger wins and the spec
+  is fixed in the same change.
+
+When the user asks for a spec, write it in that shape. Capture each decision as a rule first,
+then cite it from the spec. A spec sentence that decides something and has no rule ID is a
+missing rule or an ambiguity: capture the rule, or cut the sentence. Keep specs in the same
+folder as the ledger.
+
+## Asking for the source
+
+A rule without a source is folklore within a year. If the user has not given one, ask directly:
+which ticket, which conversation, which page. If there is genuinely no source, write the date
+and `no prior source` rather than leaving it blank — the absence is itself worth recording.
+
+## Writing the why
+
+The source line carries the reason. State what went wrong without the rule, in domain terms.
+
+Weak: `2026-08-02, TICK-118. Changed to 48 hours.`
+Strong: `2026-08-02, TICK-118. Venues were cancelling on the Friday and the kitchen had no time to reorder.`
+
+When amending a rule, record why the _previous_ version was wrong, not only what the new one
+says. That is what tells a future reader whether the rule still applies under changed
+circumstances.
+
+## Amending a rule
+
+Rewrite the statement in place so the rule reads as current truth. Add a dated line to the
+source. Never leave two contradictory statements in one entry.
+
+Read every existing source line for claims the amendment makes wrong. A source that records the
+old reasoning is fine; a source that asserts the opposite of the current rule is misleading.
+Rewrite it as history — "Previously: server local time. Superseded 2026-09-23." — in the same edit.
+
+If a rule changes, every rule that takes it as a given may now be wrong. Name those rules to the
+user and ask whether each still holds. Do the same for any rule restating the same formula or
+term. This is the failure mode the whole scheme exists to prevent, so do not skip it because the
+change looked small.
+
+## Building a ledger from a codebase
+
+Code tells you what the system does, not what anyone intended. Some of it is decision, some is
+accident, some is a framework default nobody chose. A ledger built from code must not launder
+accidents into rules.
+
+1. Capture every rule as `status: observed`. Source: `observed: [file] [function]` and what the
+   code does.
+2. Draft candidate intents from the rules, also `observed`. Do not settle them yourself.
+3. Flag likely accidents on each observed rule with a `suspect:` note in the source:
+   - enforced only on the client, or only in one of several code paths
+   - two code paths that disagree
+   - a hard-coded number with no comment or config
+   - behaviour that simply matches a framework or library default
+   - implicit timezone, locale, sort order or rounding
+   - a TODO, FIXME or "temporary" near the code
+4. Hand over to _Intent review_. Do not present an observed ledger as finished.
+
+## Building code against the ledger
+
+When the ledger is ahead of the code, for a new feature or a rebuild on a new stack, the rules are
+the acceptance list. Build in small pieces, each citing its rules and naming its tests by ID.
+
+- **Ask, do not invent.** When building a rule forces a question the ledger does not answer
+  (trim or not, 404 or 403, which page size, does a deleted record count), stop and ask. Record
+  the answer as a dated amendment or a new rule before writing the code. Otherwise the decision
+  is made silently, in code, by whoever happened to write it.
+- **Attended rules are checkpoints.** With the owner present, propose the approach for an
+  attended rule and wait for an OK before building it (see _Attended rules_).
+- **When code and a rule disagree,** a named test fails. Ask which is true. If the owner says the
+  code is right, amend the rule on purpose (statement, tests and source) and name the rules that
+  take it as a given. Never edit a test just to make it pass.
+- **Who else touches this data?** Before building a rule that protects data from being changed or
+  removed, find every other writer: scheduled jobs, database cascades, admin tools, migrations,
+  imports. A rule can be broken by code that never mentions it.
+- **Cite only where enforced.** `br-B07:` marks code that enforces the rule. Explaining a rule
+  elsewhere, write it without the colon, so the index never claims enforcement that is not there.
+- **Rebuilds.** On a rewrite, `gap:` lines still describe the old code. Leave each one until the
+  feature it describes is rebuilt, then delete it or rewrite it for the new code. Enforcement
+  starts at `none` on the new code; that is the honest starting point.
+- **Tunable numbers** (br-M31). The rule states the default, a design note names the config key,
+  and the tests state the number themselves.
+
+## Intent review mode
+
+Use after building from a codebase, or when the user says "intent review", "confirm the observed
+rules", or asks what the code does by accident.
+
+1. Confirm the intents first. For each observed intent: keep, rewrite, merge, or drop. Every
+   intent needs a `broken when:`.
+2. Then take each observed rule, one at a time, suspect ones first. Show the rule, the evidence,
+   and any suspect flags. Ask the owner to pick one:
+   - **Intended** — set `settled` (or `open` if questions remain), add `serves:`, and write the
+     real reason in the source. The code is evidence; the reason is not.
+   - **Accident** — rewrite the rule to the intended behaviour and add a `gap:` describing what
+     the code does now. Or mark it `open` with the question that decides it.
+   - **Doesn't matter** — delete the entry. Not every behaviour needs a rule. Trimming is part of
+     the value. An observed rule that was never confirmed has no ID history worth keeping, so it
+     is deleted rather than retired.
+3. Add a source line to each: today's date, `intent review`, the decision in one sentence.
+4. Report how many were intended, accidents, and dropped.
+
+## Grill mode
+
+Use when the user says "grill me", or asks to settle or work through the open rules.
+
+The goal: every open rule ends with a testable result. Ones and zeros.
+
+1. Start with intents that lack a `broken when:` and rules that lack `serves:`. A rule cannot be
+   settled well against an unclear intent.
+2. List the open rules and how many questions each carries. Ask where to start, or start with
+   the rule most other rules take as a given.
+3. Ask one question at a time. Wait for the answer. Do not stack questions.
+4. Judge each answer: could a test prove it right or wrong?
+   - **Yes** — accept it and move on.
+   - **No** — do not accept it. Ask again, narrower. Offer two or three concrete options.
+5. When a quality is not naturally binary ("looks subordinate", "feels random", "quickly"), ask
+   for the threshold that makes it binary. Then write the three boundary tests.
+6. When the answer branches, draw the decision table and ask about the empty rows.
+7. When the answer involves dates or counts, write two worked examples and ask the user to
+   confirm the exact outputs.
+8. Raise new questions as they appear. An answer often exposes a case nobody considered.
+9. When every question on a rule has a testable answer, rewrite the rule and its tests, show
+   them, and ask the user to confirm. The user settles the rule, not the skill.
+10. Add a source line: today's date, `grill session`, and the reason in one sentence.
+11. If the user skips a question, leave it on the rule. The rule stays open.
+
+When finished, report what settled and what is still open.
+
+Unfalsifiable answers to push back on:
+
+- "It should handle it sensibly." — Handle it how? Name the behaviour.
+- "Whatever is standard." — Which standard? Write down what it says.
+- "We'll see." — Then the rule stays open, with the question recorded.
+
+## Review mode
+
+Use when the user says "fresh eyes", "review the ledger", "check the rules", or asks whether the
+ledger is consistent. Grill mode settles open rules. Review mode finds rot in settled ones.
+
+If `scripts/ledger-check.ts` is installed, run it first and fix what it reports. It catches the
+mechanical problems so review can spend its attention on meaning.
+
+Then work through every rule and check:
+
+1. **Kind and framing.** Does the kind match the statement? A When/Then whose condition can never
+   be false in a valid state is an invariant written as a behaviour.
+2. **Stale source claims.** Does any source line assert the opposite of the current rule?
+3. **Terminology.** Is every domain term in the glossary and used exactly as defined? Watch
+   "visit", "session", "load", "active", "live", "length", "optional", "present".
+4. **Intent fit.** Does the rule still serve the intent it names — or has it drifted into
+   protecting an implementation? Does any rule contradict an intent's non-goal?
+5. **Size and mechanism.** Over two sentences without a `compound:` reason? Describing update
+   steps instead of an outcome? Propose the split using the _Complex areas_ pattern.
+6. **Test fit.** For attended rules at least, does each named test in code check the rule's
+   Fails if condition, or does it only exist? A hollow test reports `passing` all the same.
+7. **Cross-rule agreement.** Do rules, examples and tests that touch the same concept agree?
+   Recompute every worked example and every number in a test against the definition. A formula
+   restated in two places is a contradiction waiting to happen.
+8. **Cross-document agreement.** Read the project's other specs and briefs — feature specs, the
+   product brief, architecture notes, the README. Flag any claim that contradicts a settled rule
+   or an intent's non-goal, and any decision stated without a rule ID (br-M30). Propose the fix:
+   amend the document, or capture the missing rule.
+9. **Other writers.** For every rule that protects data from being changed or removed, list what
+    else writes or deletes that data: scheduled jobs, database cascades, admin tools, migrations.
+    Does each one respect the rule? A cleanup job or a cascade can break it without citing it.
+
+For each issue: state it in one sentence, quote the specific text, and propose the fix. Do not
+rewrite without confirming with the user.
+
+When finished, report how many issues were found, fixed, and deferred.
+
+## Enforcement
+
+Enforcement says whether the code has caught up with the ledger. It is computed, never written by
+hand (br-M29), and it lives in the Enforcement column of the generated index.
+
+| State     | Meaning                                                                                   |
+| --------- | ----------------------------------------------------------------------------------------- |
+| `none`    | No code cites the rule.                                                                   |
+| `cited`   | Code cites the rule, but not every ledger test has a named test in code.                  |
+| `tested`  | Every ledger test (`B07.1`, `B07.2` …) has a test named `br-B07.1`, `br-B07.2` … in code. |
+| `passing` | Those tests all passed in the supplied test results.                                      |
+
+`, gap` is appended when the rule has a `gap:` line. Retired rules show `—`.
+
+The index then doubles as the work list: every settled rule that is not `passing` is work left,
+and every `gap` is a known lie in the code.
+
+`passing` means the named tests exist and passed. It does not prove they test the rule: a test
+named `br-B07.1` that asserts nothing still passes. Say so when reporting enforcement, and in
+review mode read the tests of any `attended: required` rule against its Fails if line.
+
+`scripts/ledger-check.ts` does the computing. It:
+
+- scans the repository's code files. `br-B07:` (the ID followed by a colon) and `@see br-B07`
+  are citations: code that enforces the rule. Any other mention, such as "(br-B07)" in an
+  explanation, is not counted, so explaining a rule never makes it look enforced; the checker
+  reports how many such mentions it saw. `br-B07.1` inside a string literal is a test name. A test
+  named with a bare `B07.1` is reported as a likely missing prefix. An ID in code that matches no
+  rule is an error, cited or mentioned
+- reads test results when given `--results=` to decide `passing`: Jest or Vitest JSON, TRX
+  (`dotnet test --logger trx`) or JUnit XML (pytest, Go via gotestsum, most CI tools). It takes
+  files or directories, comma-separated, and detects each format from its content. A test ID with
+  any failing result, such as one row of a data-driven test, is not passing
+- lints the ledger: missing kinds, `serves:` and `given:` pointing at nothing, rules over two
+  sentences without `compound:`, missing Fails if lines, cited IDs with no rule, and a leftover
+  Recent changes section
+- reads a rule's tests from its numbered Tests lines and from the first column of its examples or
+  decision table
+- reads tags on rules and intents, and warns about a rule with no tags (br-M08) or a tag that is
+  not lowercase letters, digits and hyphens
+- with `--tag`, lists every tag with how many rules and intents carry it; with `--tag=name`, lists
+  the rules and intents that carry it, then exits without checking anything else
+- with `--write`, rebuilds the whole index from the rule entries: ID, statement, serves, tags,
+  status (with `, attended`) and enforcement, in document order, padded the way a formatter would
+- with `--verify`, exits non-zero when the index differs from what `--write` would build
+- with `--require=tested` (or any level), exits non-zero when a settled rule is below it
+
+It is a local script, like the audio script. It runs on the developer's machine and in the
+conversation. Nothing is hooked up unless the user chooses to.
+
+**When the user asks what's left, which rules are enforced, or to check the ledger against the
+code:**
+
+1. Check whether `scripts/ledger-check.ts` exists in the project.
+   - **Yes** — run `npx tsx scripts/ledger-check.ts --write` and report settled rules below
+     `passing` grouped by intent, the gaps, and any stale citations.
+   - **No** — offer to install it (see below), then run it.
+2. If the project's test runner can write results in a supported format, offer to run the tests
+   with that output and rerun the checker with `--results=` so `passing` is real. See _Test names
+   by stack_ for the command.
+
+**Installing the script into a project:**
+
+Offer to install whenever the script is missing and the user asks about enforcement, or whenever
+the user says "install the checker" or "set it up so I can run it outside Claude".
+
+1. Copy `assets/ledger-check.ts` to `scripts/ledger-check.ts` in the project.
+2. If `package.json` exists, add `"ledger:check": "tsx scripts/ledger-check.ts --write"` to the
+   `scripts` block — only if `tsx` is already a dependency.
+3. Confirm: "Installed. Run `npx tsx scripts/ledger-check.ts --write` (or `npm run
+ledger:check`) any time to refresh the index."
+4. Then recommend wiring it in — once, in a few lines, without doing it (see below).
+
+**Wiring it in (recommend, do not do):**
+
+Running the checker by hand keeps the index honest only while someone remembers to. Tell the
+user it can be wired in, tailored to what the repo already has, and leave the choice with them.
+Do not create or edit workflow files, git hooks or CI config unless the user asks — they are
+shared infrastructure.
+
+Look at the repo first so the recommendation is concrete: which CI system, which hook manager,
+which test runner and where it runs from. Then suggest:
+
+- **Pre-commit hook** — `npx tsx scripts/ledger-check.ts`. No test run, so it is fast. Catches
+  broken references and citations of rules that do not exist before they are committed.
+- **CI step** — run the tests with JSON output, then
+  `npx tsx scripts/ledger-check.ts --results=<results> --verify --require=tested`.
+  `--verify` fails when someone forgot to refresh the index. `--require` fails when a settled
+  rule has lost its tests. CI never uses `--write` — it must not commit to the branch.
+
+Name the exact files and commands for their setup, for example: "Vitest runs from `nuxt/`, so
+results would be `--results=nuxt/test-results.json`," or "`dotnet test` writes one TRX per test
+project, so pass the folder: `--results=TestResults`." The checker needs Node; in a .NET-only CI
+image, add a Node setup step before it. If they say yes, write them and show the
+diff.
+
+**After any ledger change**, if the checker is installed, offer in one line to run it with
+`--write`. After any code change that touches cited rules, do the same.
+
+This skill does not fix the code to close gaps unless asked. It reports them.
+
+### Test names by stack
+
+The test ID goes in whatever the framework reports as the test's name, because that is what the
+results file carries. Method names cannot hold a hyphen, so use the display name.
+
+| Stack        | Test name                                           | Results for `--results=`                                                                                                                                                                                         |
+| ------------ | --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Jest, Vitest | `test("br-B03.1 …")`                                | `--json --outputFile=results.json` (Jest), `--reporter=json --outputFile=results.json` (Vitest)                                                                                                                  |
+| xUnit        | `[Fact(DisplayName = "br-B03.1 …")]`                | VSTest: `dotnet test --logger trx`. Microsoft.Testing.Platform (xUnit v3): `dotnet test --results-directory TestResults --report-xunit-trx --report-xunit-trx-filename results.trx`. Then the TestResults folder |
+| NUnit        | `[TestCase(TestName = "br-B03.1 …")]`               | as xUnit                                                                                                                                                                                                         |
+| MSTest       | `[TestMethod("br-B03.1 …")]`                        | as xUnit                                                                                                                                                                                                         |
+| pytest       | `@pytest.mark.parametrize(..., ids=["br-B03.1 …"])` | `pytest --junitxml=results.xml`                                                                                                                                                                                  |
+| Go           | `t.Run("br-B03.1 …", …)`                            | `gotestsum --junitfile results.xml`                                                                                                                                                                              |
+
+Check which runner the project uses before suggesting a command: with `"test": { "runner":
+"Microsoft.Testing.Platform" }` in `global.json`, `--logger trx` fails with exit code 5.
+
+For .NET use TRX, not the JUnit logger: JunitXml.TestLogger writes method names and drops display
+names, so no test IDs survive. The checker warns when a results file has no br- test IDs.
+
+In .NET, `[Trait("Rule", "br-B03")]` (xUnit) or `[Category("br-B03")]` (NUnit) also lets
+`dotnet test --filter` run every test for one rule. Suggest it; it does not affect enforcement.
+
+## Audio script
+
+Use when the user says "read me the rules", "audio", "listen", or asks for an audio version.
+
+`assets/audio-ledger.ts` generates a listening-friendly script. It reads each intent — statement,
+who it is for, what broken looks like, the non-goals and the intent's tags — then the rules that
+serve it: ID, tags, statement and Fails if. No tests, sources or metadata. M rules and retired rules are skipped.
+Rules with no intent are read last. A 1.x ledger with no intents falls back to grouping by area.
+You hear the why before the what, which is where listening beats reading.
+
+1. Check whether `scripts/audio-ledger.ts` exists in the project.
+   - **Yes** — run `npx tsx scripts/audio-ledger.ts` and return the output.
+   - **No** — offer to install it, then run it.
+2. Offer to save it: `npx tsx scripts/audio-ledger.ts --out=rules-audio.txt`. On macOS,
+   `--speak` reads it aloud.
+
+**Installing:** copy `assets/audio-ledger.ts` to `scripts/audio-ledger.ts`. If `tsx` is a
+dependency, add `"audio:ledger": "tsx scripts/audio-ledger.ts"` to `package.json`.
+
+After any ledger change, if the script exists, offer in one line to regenerate it.
+
+### Decision briefs
+
+When the owner is listening rather than reading, or asks for an audio version of a proposal,
+write the proposal itself for the ear: prose, no tables or code, short sentences, numbers spelled
+the way they are spoken. Say what the change does in order, then the trade-off, and end with the
+decisions as plain questions, one per sentence. The decisions go last so they are what the
+listener remembers.
+
+## Attended rules
+
+`attended: required` is a risk marker, not a difficulty rating. Difficulty goes stale once a rule
+is built. Risk does not. Ask about it when capturing a rule that touches money, liability,
+deletion, security or customer data, but never apply it by default — a ledger where every rule
+is attended gives an agent nothing to do.
+
+An agent working unattended skips attended rules and lists them for the owner. It does not
+implement them, change them, or change code that cites them.
+
+With the owner present, an attended rule is a checkpoint. Propose how it will be built, including
+anything it touches beyond the rule's own code, and wait for an OK before writing it. The
+proposal is where hidden risks surface: a job, a cascade or an admin tool that would break the
+rule.
+
+## Older ledgers
+
+The document header states the format version. When opening a ledger with an older version or
+no version, say so and offer to upgrade it. Do not upgrade without asking. List the changes the
+upgrade would make before making them.
+
+Upgrading 2.x to 2.5.0 is mechanical; no rule changes:
+
+1. Set `Format: business-rules-ledger 2.5.0`.
+2. Install `assets/business-rules-authoring.md` as `BUSINESS-RULES-AUTHORING.md` next to the ledger.
+3. Replace the `How to write rules (br-M)` section with the template's `How to read this ledger`
+   section, and point the header line at `BUSINESS-RULES-AUTHORING.md`.
+4. Remove the br-M rows from the index. Note the file in the registry's M row.
+5. Reinstall both scripts from the skill and run the checker.
+6. From 2.3.0 or earlier: only `br-B07:` and `@see br-B07` count as citations now. Run the
+   checker; it reports uncounted mentions. Add the colon where the code enforces the rule.
+7. From 2.3.5 or earlier: reinstall both scripts. The checker now reads tags. It warns about a rule
+   with no tags or a malformed tag; fix those. Tagging intents is optional. No rule changes.
+8. From 2.4.0 or earlier: rename `LEDGER-AUTHORING.md` to `BUSINESS-RULES-AUTHORING.md`, reinstall it
+   from the skill, and update the two links in the ledger and the registry's M row. Delete the
+   Recent changes section; history lives in source lines and git.
+   Replace the index's introduction line with the template's, then run the checker with `--write`
+   to rebuild the index from the rules. Review the diff: where a hand-written index line said
+   something the rule statement does not, the statement is what to fix. Then, rule by rule and
+   only where it applies, number the rows of examples tables as tests and delete the
+   Given/When/Then lines they repeat, and cut design notes that restate another document down to
+   a pointer. Ask before those last two; they touch rule content. Optionally join each rule's
+   short fields onto one line (see _Document structure_); the scripts read either form.
+
+Upgrading 1.x to 2.5.0, in stages the user can stop between:
+
+1. Set `Format: business-rules-ledger 2.5.0`. Do steps 2 to 4, 6 and 8 of the 2.x upgrade above.
+2. Add the Intents and Glossary sections. Draft intents from the existing rules and their
+   sources, mark them `observed`, and confirm them with the user one at a time.
+3. Add `kind:` and `serves:` to every rule. Propose both; ask only where unclear.
+4. Offer to mark rules whose only source is a code review as `observed`, and run intent review.
+5. Add `gap:` lines where sources already admit the code diverges ("currently client-side
+   only", "must be corrected in the migration").
+6. Install the checker and run it with `--write`; it rebuilds the index with every column.
+7. Offer a review-mode pass for rules over two sentences, using the _Complex areas_ pattern.
+
+## Open rules
+
+Mark a rule `open` whenever a question about it is unanswered — including questions the user has
+not noticed. Raising them is a large part of the value here; a rule that sounds complete usually
+is not.
+
+Write the questions under the rule, one per line, in domain terms. Keep asking the awkward ones:
+what happens when it is too late, who gets told, what if the person has left, which of two rules
+wins when they conflict.
+
+When opening an existing ledger, report the observed and open rules before doing anything else,
+and the enforcement summary if the checker is installed. Nothing else in the document forces
+them to close.
+
+## History
+
+The ledger keeps no change log. A rule's history lives in its own source lines, dated and with the
+reason; the document's history lives in git. When one change touches several rules for one
+reason, give each a source line with the same date and reason, so any one of them explains itself.
+
+## The index
+
+The index is built, not written. `scripts/ledger-check.ts --write` reads every rule entry except
+the authoring rules and writes one row per rule, retired ones included: its ID, its statement, the
+intents it serves, its tags, its status and its enforcement. The statement, serves, tags and
+status are written once, in the entry (br-M09). Never edit a row; amend the entry and rebuild.
+`--verify` fails when someone forgot to.
+
+A long statement makes a long row. That is a hint the rule wants splitting (br-M07), not a reason
+to write a shorter version somewhere else.
+
+## Document structure
+
+Use this order exactly:
+
+```markdown
+# Business Rules Ledger — [project]
+
+Source of truth. Code and tests conform to this document.
+Written under the authoring rules in [`BUSINESS-RULES-AUTHORING.md`](BUSINESS-RULES-AUTHORING.md).
+Format: business-rules-ledger 2.5.0
+
+## Intents
+
+[### in-NN entries]
+
+## Glossary
+
+[table: Term | Meaning | Defined by]
+
+## Index
+
+[built by the checker: ID | Rule | Serves | Tags | Status | Enforcement — no br-M rows]
+
+## How to read this ledger
+
+[the reading section, as in the template]
+
+## Citing rules in code
+
+[the grep explanation and the comment and test-name examples, as in the template]
+
+## Registry
+
+[table: Letter | Area]
+
+## br-[X][NN]
+
+[rule entries, grouped by area, in ID order]
+```
+
+Intent entry:
+
+```markdown
+### in-02
+
+A user is rewarded for consistency without being punished mid-day.
+
+for: people building a daily habit
+broken when: the streak shows 0 at 9am before the day's first entry.
+non-goal: shaming a missed day.
+status: settled
+
+**Source**
+
+- 2026-09-23, grill session. Users open the app in the morning; a broken streak there felt like failure.
+```
+
+Glossary row:
+
+```markdown
+| live | An active streak whose most recent track was today or yesterday in UTC. | br-B07 |
+```
+
+Rule entry:
+
+```markdown
+## br-B03
+
+kind: behaviour | serves: in-01 | given: br-B01 | status: open | attended: required
+gap: acknowledgement is not checked before confirmation; confirmEvent() skips it.
+
+When a guest names a requirement, then a named person at the venue must acknowledge it before the event is confirmed.
+
+`#allergen` `#liability` `#audit`
+
+**Open questions**
+
+- Who acknowledges when the named person has left the venue?
+
+**Tests**
+
+- B03.1 — Given an event with an unacknowledged requirement. When the venue confirms the event. Then the event stays unconfirmed.
+- B03.2 — Given an unacknowledged requirement. When a venue user acknowledges it. Then the event stores their name and the time.
+
+> Fails if an acknowledgement is recorded without a person.
+
+**Design notes**
+
+- Acknowledgement is a row in requirement_ack, not a flag, so the history survives edits.
+
+**Source**
+
+- 2026-07-14, planning conversation. Venues buy protection from liability.
+```
+
+A rule with examples numbers them as its tests and writes only the rest under Tests:
+
+```markdown
+**Examples**
+
+Today is 8 Oct.
+
+| Test  | Days with tracks | Days carrying the streak line |
+| ----- | ---------------- | ----------------------------- |
+| U10.1 | 8, 7, 6 Oct      | 8, 7, 6 Oct                   |
+| U10.2 | 6, 5 Oct         | none                          |
+
+> Fails if a day outside the open streak carries the streak line, or a day of the open streak does not.
+```
+
+Field order: kind, serves, given, status, attended, gap, compound. Write the short fields (kind
+to attended) on one line, separated by ` | `, and `gap:` and `compound:` each on a line of their
+own, since they hold sentences. One field per line also parses, for older ledgers. Omit `given` when the rule
+stands alone. Omit `attended`, `gap` and `compound` unless they apply. Omit `Open questions` when
+the rule is settled, `Examples` and `Design notes` when there are none, and `Tests` when every test
+is a row of the examples table. Examples or a decision table go between the tags and the open
+questions, under an `**Examples**` heading.
+
+## Judgement calls
+
+**How far to split.** Split where parts fail for their own reasons. Not every test deserves an
+ID. Two tests that both fail because the same thing broke belong to one rule.
+
+**Rule or design note.** Apply the notice check. The exception is br-M23: when stored state must
+agree with a definition, that agreement is a rule, even though the storage itself is a design note.
+
+**Rule or intent.** If it names a mechanism, number, or screen, it is a rule. If it names an
+outcome a user would describe in their own words, it is an intent.
+
+**When the user is vague.** Do not write a vague rule to be agreeable. A rule that cannot be
+falsified is worse than no rule, because it looks like coverage. Write it `open` with the
+question that would settle it.
+
+**When they contradict an existing rule or a non-goal.** Say which, quote it, and ask which one
+is now true. Do not write the new one and leave both standing.
+
+---
+
+## Changelog
+
+- **2.5.0** — 2026-10-08 — Less to write twice. The checker builds the whole index from the rule entries (`--write`), so a rule's statement, serves, tags and status are written once (br-M09, br-M29 amended); `--verify` compares the whole index, and the index-agreement lints are gone. Recent changes is removed: history lives in source lines and git (br-M15, br-M16 retired); the checker warns if the section is left. Rows of an examples or decision table are tests, with the test ID in the first column, and are not repeated as Given/When/Then lines (br-M17, M25, M26 amended); the checker reads test IDs from table rows. A design note points at a document that owns the detail instead of restating it (br-M22 amended). New _History_ and _The index_ sections replace _Recording changes_ and _Maintaining the index_. The authoring file is renamed `BUSINESS-RULES-AUTHORING.md` (asset `assets/business-rules-authoring.md`), so it sorts beside `BUSINESS-RULES.md`; the checker warns when a ledger still links the old name. A rule's short fields share one line, separated by ` | ` (`kind: behaviour | serves: in-01 | status: settled`); `gap:` and `compound:` keep their own lines. Both scripts read either form. Upgrade step 8.
+- **2.4.0** — 2026-10-06 — Tags are checked and can be queried. An intent can carry tags like a rule (br-M08 amended): a line of backticked #tags under its statement. The checker reads tags on rules and intents; it warns about a rule with no tags, a malformed tag, and index tags that differ from the tags under the rule; `--tag` lists every tag with counts and `--tag=name` lists the rules and intents that carry it. The audio script reads an intent's tags. New guidance for a shared tag such as `boilerplate`, to mark what a template or another product should keep. The template shows the intent tag line. Existing ledgers need no change except fixing any new tag warnings.
+- **2.3.5** — 2026-10-02 — Lessons from building code against a ledger. Citations are the ID with a colon or after `@see` (br-M12 amended); other mentions no longer count as enforcement, and the checker reports them. Authoring rule IDs (br-M) in code are ignored. Row lengths ignore table padding. Tunable numbers: default in the rule, config key in a design note, number in the tests (br-M31). New _Building code against the ledger_: ask rather than invent, attended rules as checkpoints, code-versus-rule disagreements, other writers of protected data, gaps during a rebuild. Review mode checks other writers. Decision briefs for audio. xUnit v3 TRX command fixed.
+- **2.3.0** — 2026-10-02 — Authoring rules move out of the ledger into `LEDGER-AUTHORING.md` (new asset, installed next to the ledger); the ledger carries a short _How to read this ledger_ section instead, and br-M rows leave the index (br-M09 amended). Added _Specs alongside the ledger_: a spec is a welcome overview when it names its intents and cites rules for every decision (br-M30). Review mode gains a cross-document agreement check. Checker warns when the linked authoring file is missing, and skips every copy of itself when scanning, not only the one running. Added the 2.x upgrade path.
+- **2.2.1** — 2026-09-25 — Checker skips its own file when scanning; an example comment in it counted as a citation of br-B03 once installed in a project.
+- **2.2.0** — 2026-09-24 — Checker reads TRX and JUnit XML results as well as Jest/Vitest JSON; --results takes files or directories, comma-separated; warns on results with no test IDs. Added Test names by stack (Jest, Vitest, xUnit, NUnit, MSTest, pytest, Go). Verified against real dotnet test output.
+- **2.1.2** — 2026-09-24 — Amended br-M13: tests in code are named br-B03.1; the skill now says so where it named bare B03.1. Checker counts a test ID only inside a string literal (test name), warns on unprefixed test names, and says what passing does not prove. Review mode gains a test-fit check.
+- **2.1.1** — 2026-09-24 — Template and format lines match the skill version. Both scripts carry a version comment. Description trimmed under 1024 characters.
+- **2.1.0** — 2026-09-24 — Checker installs and runs locally like the audio script. Added --verify (index out of date). Hooks and CI are recommended, tailored to the repo, never set up without asking.
+- **2.0.0** — 2026-09-24 — Intents layer (in-NN, serves:, non-goals). Glossary. Rule kinds. Statuses observed and retired. Enforcement computed by the new checker (assets/ledger-check.ts) and written into the index; gap: field. Complex-areas pattern: definitions, worked examples, decision tables, consistency invariants, boundary tests; mechanism moves to design notes. Two-sentence limit with compound:. Building from a codebase, and intent review mode. Review mode gains intent fit, size, and cross-rule checks. Audio groups by intent. Amended br-M04 M07 M09 M10; added br-M20 to M29.
+- **1.5.5** — 2026-09-23 — Audio script: uppercase IDs, tags inline, Fails if on own line, full stops, section heading includes rule count.
+- **1.5.0** — 2026-09-23 — Added audio script mode. Ships assets/audio-ledger.ts; offers to install it into any project so it runs outside Claude. Triggers on "read me the rules", "audio", "listen".
+- **1.4.0** — 2026-09-22 — Added review mode (fresh-eyes pass for settled rules). Added conditional framing check to capturing a rule. Added stale source clause audit to amending a rule.
+- **1.3.0** — 2026-09-22 — Amended br-M04: plain-assertion form for invariants and definitions alongside When/Then. Amended br-M17: Fails if written as a blockquote.
+- **1.2.0** — 2026-09-22 — Added the optional attended field, br-M19.
+- **1.1.0** — 2026-09-22 — Added grill mode. Added format version to the ledger header, and an offer to upgrade older ledgers.
+- **1.0.0** — 2026-09-22 — First version. Given / When / Then tests, open and settled status, index, recent changes, br-M01 to br-M18.
