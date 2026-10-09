@@ -119,7 +119,10 @@ interface Rule {
   tests: string[];
   hasFailsIf: boolean;
   hasOpenQuestions: boolean;
+  openQuestions: number;
   tags: string[];
+  // The newest date in the entry's source lines, so the report can say how long it has waited.
+  lastSource: string;
 }
 
 interface Intent {
@@ -127,6 +130,7 @@ interface Intent {
   statement: string;
   fields: Record<string, string>;
   tags: string[];
+  lastSource: string;
 }
 
 const errors: string[] = [];
@@ -145,6 +149,10 @@ function fieldLines(line: string, names: string[]): [string, string][] | null {
   return out.every(Boolean) ? (out as [string, string][]) : null;
 }
 
+// A source line starts with its date: "- 2026-09-24, grill session. …".
+const SOURCE_DATE = /^-\s+(\d{4}-\d{2}-\d{2})\b/;
+const newer = (a: string, b: string) => (b > a ? b : a);
+
 function parseLedger(content: string) {
   const rules: Rule[] = [];
   const intents: Intent[] = [];
@@ -152,6 +160,7 @@ function parseLedger(content: string) {
   let intent: Intent | null = null;
   let inStatement = false;
   let statementDone = false;
+  let inQuestions = false;
 
   const close = () => {
     if (rule) rules.push(rule);
@@ -160,6 +169,7 @@ function parseLedger(content: string) {
     intent = null;
     inStatement = false;
     statementDone = false;
+    inQuestions = false;
   };
 
   for (const raw of content.split("\n")) {
@@ -176,13 +186,15 @@ function parseLedger(content: string) {
         tests: [],
         hasFailsIf: false,
         hasOpenQuestions: false,
+        openQuestions: 0,
         tags: [],
+        lastSource: "",
       };
       continue;
     }
     if (intentHead) {
       close();
-      intent = { id: intentHead[1], statement: "", fields: {}, tags: [] };
+      intent = { id: intentHead[1], statement: "", fields: {}, tags: [], lastSource: "" };
       continue;
     }
     if (/^#{1,3} /.test(raw)) {
@@ -191,6 +203,11 @@ function parseLedger(content: string) {
     }
 
     if (intent) {
+      const date = line.match(SOURCE_DATE);
+      if (date) {
+        intent.lastSource = newer(intent.lastSource, date[1]);
+        continue;
+      }
       if (TAG_LINE.test(line)) {
         intent.tags = tagsOf(line);
         continue;
@@ -233,7 +250,13 @@ function parseLedger(content: string) {
     }
 
     if (TAG_LINE.test(line)) r.tags = tagsOf(line);
-    if (/^\*\*Open questions\*\*/.test(line)) r.hasOpenQuestions = true;
+    const date = line.match(SOURCE_DATE);
+    if (date) r.lastSource = newer(r.lastSource, date[1]);
+    if (/^\*\*/.test(line)) inQuestions = false;
+    if (/^\*\*Open questions\*\*/.test(line)) {
+      r.hasOpenQuestions = true;
+      inQuestions = true;
+    } else if (inQuestions && /^-\s/.test(line)) r.openQuestions++;
     if (/^> Fails if /.test(line)) r.hasFailsIf = true;
     // A test is a bullet ("- B07.1 — Given …") or a row of an examples or decision table ("| B07.1 | …").
     const t = line.match(/^(?:-\s+|\|\s*)([A-Z]\d{2}\.\d+)\b/);
@@ -517,6 +540,12 @@ function listTags(rules: Rule[], intents: Intent[]): never {
   process.exit(0);
 }
 
+function intentSummary(intents: Intent[]) {
+  const by = new Map<string, number>();
+  for (const i of intents) by.set(i.fields.status ?? "no status", (by.get(i.fields.status ?? "no status") ?? 0) + 1);
+  return by.size ? ` (${[...by].map(([s, n]) => `${n} ${s}`).join(", ")})` : "";
+}
+
 // The index, rebuilt from the rule entries in document order. Every cell comes from the rule, so
 // nothing in it is edited by hand. Padded like a formatter would, so a formatter changes nothing.
 function renderIndex(rules: Rule[], enforcement: (r: Rule) => string): string[] {
@@ -537,6 +566,42 @@ function renderIndex(rules: Rule[], enforcement: (r: Rule) => string): string[] 
   const width = head.map((h, i) => Math.max(3, h.length, ...rows.map((r) => r[i].length)));
   const line = (r: string[]) => `| ${r.map((c, i) => c.padEnd(width[i])).join(" | ")} |`;
   return [line(head), `| ${width.map((w) => "-".repeat(w)).join(" | ")} |`, ...rows.map(line)];
+}
+
+// Markdown beside the ledger: specs, briefs, notes. A spec names the intents it serves and cites
+// rules for its decisions (br-M30), so an ID that matches nothing is a broken link, and a spec
+// that names no intent is not yet tied to the ledger.
+function checkDocs(ruleIds: Set<string>, intentIds: Set<string>) {
+  const skip = new Set([LEDGER, ...["BUSINESS-RULES-AUTHORING.md", "LEDGER-AUTHORING.md"].map((n) => join(dirname(LEDGER), n))]);
+  const docs: string[] = [];
+  const find = (dir: string) => {
+    for (const name of readdirSync(dir)) {
+      if (SKIP_DIRS.has(name)) continue;
+      const p = join(dir, name);
+      if (statSync(p).isDirectory()) find(p);
+      else if (extname(name).toLowerCase() === ".md" && !skip.has(p)) docs.push(p);
+    }
+  };
+  find(dirname(LEDGER));
+  for (const doc of docs) {
+    const where = relative(ROOT, doc);
+    let intents = 0;
+    readFileSync(doc, "utf8").split("\n").forEach((text, i) => {
+      for (const m of text.matchAll(/\b(br-[A-Z]\d{2}|in-\d{2})\b/g)) {
+        const id = m[1];
+        if (id.startsWith("in-")) {
+          intents++;
+          if (!intentIds.has(id)) warnings.push(`${where}:${i + 1}: ${id} is not an intent.`);
+        } else if (!id.startsWith("br-M") && !ruleIds.has(id))
+          warnings.push(`${where}:${i + 1}: ${id} is not a rule.`);
+      }
+    });
+    if (intents === 0)
+      warnings.push(
+        `${where}: names no intent. A spec beside the ledger names the intents it serves and cites a rule for each decision (br-M30); otherwise move it or fold it in.`,
+      );
+  }
+  return docs.length;
 }
 
 function main() {
@@ -567,6 +632,7 @@ function main() {
   }
 
   const { citations, mentions, tests: codeTests, unprefixed } = scanCode();
+  const docCount = checkDocs(ruleIds, intentIds);
   const ledgerTests = new Set(rules.flatMap((r) => r.tests));
   for (const u of unprefixed) {
     const id = u.split(" ")[0];
@@ -775,11 +841,13 @@ function main() {
   out.push(
     `Rules: ${active.length} active (${STATUSES.filter((s) => s !== "retired")
       .map((s) => `${byStatus[s]} ${s}`)
-      .join(", ")}), ${byStatus.retired} retired. Intents: ${intents.length}.`,
+      .join(", ")}), ${byStatus.retired} retired. Intents: ${intents.length}${intentSummary(intents)}.`,
   );
   out.push(
     `Settled enforcement: ${LEVELS.map((l) => `${counts[l]} ${l}`).join(", ")}.${passed ? "" : " (no --results given)"}`,
   );
+  if (docCount > 0)
+    out.push(`Other documents beside the ledger: ${docCount} checked for rule and intent IDs.`);
   if (counts.passing > 0)
     out.push(
       "Passing means the named tests passed, not that they check the rule. Review the tests of attended rules.",
@@ -811,6 +879,30 @@ function main() {
         out.push(`    ${r.id}  ${cellFor(r)}${detail}`);
       }
     }
+  }
+
+  // Observed and open entries close only when the owner answers; nothing else forces them to.
+  const waiting = [
+    ...intents.filter((i) => i.fields.status === "observed"),
+    ...active.filter((r) => r.fields.status === "observed" || r.fields.status === "open"),
+  ];
+  if (waiting.length) {
+    out.push("", `Waiting on the owner (${waiting.length}), oldest first:`);
+    const today = new Date().toISOString().slice(0, 10);
+    const age = (d: string) => {
+      if (!d) return "no dated source";
+      const days = Math.round((Date.parse(today) - Date.parse(d)) / 86_400_000);
+      return `since ${d}, ${days} day${days === 1 ? "" : "s"}`;
+    };
+    for (const e of [...waiting].sort((a, b) => a.lastSource.localeCompare(b.lastSource))) {
+      const status = e.fields.status;
+      const questions =
+        "openQuestions" in e && e.openQuestions ? `, ${e.openQuestions} question${e.openQuestions === 1 ? "" : "s"}` : "";
+      out.push(`  ${e.id.padEnd(6)}  ${status}${questions} (${age(e.lastSource)})`);
+    }
+    out.push(
+      "  Observed entries close in intent review, open ones in a grill session. Ask the owner which to start.",
+    );
   }
 
   const gaps = active.filter((r) => r.fields.gap);

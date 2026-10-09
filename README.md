@@ -94,6 +94,7 @@ business-rules-ledger/        the skill: install this folder
 
 examples/journal-app/         a small app built against a ledger. Start here.
 scripts/package.sh            builds dist/business-rules-ledger-<version>.zip
+scripts/check.sh              one version everywhere; the example's copies match the assets (--fix syncs)
 ```
 
 ## Install

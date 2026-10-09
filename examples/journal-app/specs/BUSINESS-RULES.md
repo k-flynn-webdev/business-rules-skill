@@ -554,7 +554,7 @@ The feed shows 20 tracks per page.
 
 **Source**
 
-- observed: src/tracks.ts FEED_PAGE_SIZE. suspect: a hard-coded number with no comment or config. Confirm in intent review whether 20 was chosen.
+- 2026-09-25, observed: src/tracks.ts FEED_PAGE_SIZE. suspect: a hard-coded number with no comment or config. Confirm in intent review whether 20 was chosen.
 
 ---
 

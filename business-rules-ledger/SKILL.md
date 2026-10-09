@@ -281,8 +281,9 @@ Code tells you what the system does, not what anyone intended. Some of it is dec
 accident, some is a framework default nobody chose. A ledger built from code must not launder
 accidents into rules.
 
-1. Capture every rule as `status: observed`. Source: `observed: [file] [function]` and what the
-   code does.
+1. Capture every rule as `status: observed`. Source: today's date, then `observed: [file]
+   [function]` and what the code does. The date is when it was read, so the checker can say how
+   long it has waited for the owner.
 2. Draft candidate intents from the rules, also `observed`. Do not settle them yourself.
 3. Flag likely accidents on each observed rule with a `suspect:` note in the source:
    - enforced only on the client, or only in one of several code paths
@@ -394,7 +395,8 @@ Then work through every rule and check:
 7. **Cross-rule agreement.** Do rules, examples and tests that touch the same concept agree?
    Recompute every worked example and every number in a test against the definition. A formula
    restated in two places is a contradiction waiting to happen.
-8. **Cross-document agreement.** Read the project's other specs and briefs — feature specs, the
+8. **Cross-document agreement.** Start from the checker's warnings about documents beside the
+   ledger. Then read the project's other specs and briefs — feature specs, the
    product brief, architecture notes, the README. Flag any claim that contradicts a settled rule
    or an intent's non-goal, and any decision stated without a rule ID (br-M30). Propose the fix:
    amend the document, or capture the missing rule.
@@ -440,6 +442,10 @@ review mode read the tests of any `attended: required` rule against its Fails if
   (`dotnet test --logger trx`) or JUnit XML (pytest, Go via gotestsum, most CI tools). It takes
   files or directories, comma-separated, and detects each format from its content. A test ID with
   any failing result, such as one row of a data-driven test, is not passing
+- lists what is waiting on the owner: observed intents, observed rules and open rules, oldest
+  first, with each one's latest source date and its number of open questions
+- checks the other Markdown files in the ledger's folder (specs, briefs, notes): an ID that names
+  no rule or intent is a warning, and so is a document that names no intent (br-M30)
 - lints the ledger: missing kinds, `serves:` and `given:` pointing at nothing, rules over two
   sentences without `compound:`, missing Fails if lines, cited IDs with no rule, and a leftover
   Recent changes section
@@ -462,7 +468,7 @@ code:**
 
 1. Check whether `scripts/ledger-check.ts` exists in the project.
    - **Yes** — run `npx tsx scripts/ledger-check.ts --write` and report settled rules below
-     `passing` grouped by intent, the gaps, and any stale citations.
+     `passing` grouped by intent, the gaps, what is waiting on the owner, and any stale citations.
    - **No** — offer to install it (see below), then run it.
 2. If the project's test runner can write results in a supported format, offer to run the tests
    with that output and rerun the checker with `--results=` so `passing` is real. See _Test names
@@ -626,9 +632,21 @@ Write the questions under the rule, one per line, in domain terms. Keep asking t
 what happens when it is too late, who gets told, what if the person has left, which of two rules
 wins when they conflict.
 
-When opening an existing ledger, report the observed and open rules before doing anything else,
+When opening an existing ledger, report the observed and open entries before doing anything else,
 and the enforcement summary if the checker is installed. Nothing else in the document forces
 them to close.
+
+- **Run the checker first when it is installed.** Its _Waiting on the owner_ list is the report:
+  observed intents and rules, and open rules, oldest first with their age. Observed intents
+  count. Every rule that serves one rests on a guess until the owner confirms it.
+- **Offer one next step, not a menu.** Observed entries: offer an intent review. Open rules:
+  offer a grill session. Say how long the oldest has waited. A week is long enough to raise it
+  unprompted.
+- **Name documents the ledger contradicts.** When the checker warns that a document beside the
+  ledger names no intent, say which. A plan or brief written before the ledger usually describes
+  an older system, and it sits next to a file that calls itself the source of truth.
+- **Check whether the checker is wired in.** If no CI step or hook runs it, recommend it once, as
+  in _Wiring it in_. Enforcement that relies on someone remembering it decays first.
 
 ## History
 
@@ -786,6 +804,8 @@ is now true. Do not write the new one and leave both standing.
 ---
 
 ## Changelog
+
+- **Unreleased** — Nothing waits silently. The checker lists what is waiting on the owner (observed intents, observed and open rules) oldest first, with the date of each entry's latest source line and its open-question count, and counts intents by status in the summary. It checks the other Markdown beside the ledger: an ID that names nothing is a warning, and so is a document that names no intent (br-M30). An observed rule's source starts with the date it was read. _Open rules_ says what to do on opening a ledger: run the checker, offer one next step, name contradicting documents, and recommend wiring the checker in if nothing runs it. No ledger change needed; reinstall the checker.
 
 - **2.5.0** — 2026-10-08 — Less to write twice. The checker builds the whole index from the rule entries (`--write`), so a rule's statement, serves, tags and status are written once (br-M09, br-M29 amended); `--verify` compares the whole index, and the index-agreement lints are gone. Recent changes is removed: history lives in source lines and git (br-M15, br-M16 retired); the checker warns if the section is left. Rows of an examples or decision table are tests, with the test ID in the first column, and are not repeated as Given/When/Then lines (br-M17, M25, M26 amended); the checker reads test IDs from table rows. A design note points at a document that owns the detail instead of restating it (br-M22 amended). New _History_ and _The index_ sections replace _Recording changes_ and _Maintaining the index_. The authoring file is renamed `BUSINESS-RULES-AUTHORING.md` (asset `assets/business-rules-authoring.md`), so it sorts beside `BUSINESS-RULES.md`; the checker warns when a ledger still links the old name. A rule's short fields share one line, separated by ` | ` (`kind: behaviour | serves: in-01 | status: settled`); `gap:` and `compound:` keep their own lines. Both scripts read either form. Upgrade step 8.
 - **2.4.0** — 2026-10-06 — Tags are checked and can be queried. An intent can carry tags like a rule (br-M08 amended): a line of backticked #tags under its statement. The checker reads tags on rules and intents; it warns about a rule with no tags, a malformed tag, and index tags that differ from the tags under the rule; `--tag` lists every tag with counts and `--tag=name` lists the rules and intents that carry it. The audio script reads an intent's tags. New guidance for a shared tag such as `boilerplate`, to mark what a template or another product should keep. The template shows the intent tag line. Existing ledgers need no change except fixing any new tag warnings.
