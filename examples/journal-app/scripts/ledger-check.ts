@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 /**
  * Checks a business rules ledger against the codebase, lints it, and computes each rule's enforcement.
- * Version 2.5.0 — ships with the business-rules-ledger skill. Reinstall from the skill to update.
+ * Version 2.6.0 — ships with the business-rules-ledger skill. Reinstall from the skill to update.
  *
  * Usage:
  *   npx tsx scripts/ledger-check.ts                         report only
@@ -636,6 +636,12 @@ function main() {
         warnings.push(`${r.id}: settled but still has open questions.`);
       if (status === "open" && !r.hasOpenQuestions)
         warnings.push(`${r.id}: open but lists no open questions.`);
+      // br-M28: a gap is where the code breaks a decision. An observed rule describes the code,
+      // so the code cannot diverge from it.
+      if (status === "observed" && f.gap)
+        warnings.push(
+          `${r.id}: observed with a gap:. An observed rule describes the code. Write the concern as suspect: in its source, or decide the rule (open or settled) and keep the gap.`,
+        );
     }
     for (const s of (f.serves ?? "").split(/[,\s]+/).filter(Boolean)) {
       if (!intentIds.has(s))
@@ -759,6 +765,12 @@ function main() {
   const active = rules.filter(
     (r) => !r.id.startsWith("br-M") && r.fields.status !== "retired",
   );
+  // Attended marks risk (br-M19). When most rules carry it, an agent can do little alone.
+  const attendedCount = active.filter((r) => r.fields.attended).length;
+  if (active.length >= 6 && attendedCount * 3 > active.length)
+    warnings.push(
+      `${attendedCount} of ${active.length} active rules are attended (over a third). Keep attended for money, deletion, security and customer data (br-M19).`,
+    );
   const settled = active.filter((r) => r.fields.status === "settled");
   const counts = Object.fromEntries(
     LEVELS.map((l) => [
