@@ -104,7 +104,7 @@ scripts/check.sh              one version everywhere; each example's copies matc
 Build the zip, or download it from the repo's releases when there is one:
 
 ```sh
-./scripts/package.sh        # → dist/business-rules-ledger-2.7.0.zip
+./scripts/package.sh        # → dist/business-rules-ledger-2.7.1.zip
 ```
 
 - **Claude apps (claude.ai, Desktop):** upload the zip as a custom skill in Claude's settings,
@@ -142,6 +142,7 @@ npx tsx scripts/ledger-check.ts --results=results.json  # test results decide "p
 npx tsx scripts/ledger-check.ts --verify                # exit 1 if the index is stale
 npx tsx scripts/ledger-check.ts --require=tested        # exit 1 if a settled rule has no tests
 npx tsx scripts/ledger-check.ts --tag=privacy           # list the rules carrying a tag
+npx tsx scripts/ledger-check.ts --waiting               # list everything waiting on the owner, not only the oldest 10
 ```
 
 It reads Jest and Vitest JSON, TRX (`dotnet test --logger trx`) and JUnit XML (pytest, Go via
@@ -164,9 +165,12 @@ tests, a gap the first checker run found, and an old spec beside the ledger that
 
 ## Versions
 
-The skill is at **2.7.0**. Every ledger states its format (`Format: business-rules-ledger 2.7.0`),
+The skill is at **2.7.1**. Every ledger states its format (`Format: business-rules-ledger 2.7.1`),
 and the skill offers to upgrade an older ledger, listing the changes first. The changelog is at
 the end of [`SKILL.md`](business-rules-ledger/SKILL.md).
+
+2.7.1 keeps that report short on a large ledger: the oldest 10 waiting entries, ages from when an
+entry was read, and one warning for every document that names no intent.
 
 2.7.0 makes sure nothing waits silently: the checker lists what is waiting on the owner, oldest
 first, and checks the other documents beside the ledger for IDs that name nothing.

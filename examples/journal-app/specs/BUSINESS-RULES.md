@@ -2,7 +2,7 @@
 
 Source of truth. Code and tests conform to this document.
 Written under the authoring rules in [`BUSINESS-RULES-AUTHORING.md`](BUSINESS-RULES-AUTHORING.md).
-Format: business-rules-ledger 2.7.0
+Format: business-rules-ledger 2.7.1
 
 ---
 

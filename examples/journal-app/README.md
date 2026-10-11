@@ -47,7 +47,7 @@ Settled rules not yet passing:
   in-03
     br-B14  none, gap — missing tests: B14.1, B14.2
   …
-Waiting on the owner (2), oldest first:
+Waiting on the owner (1 observed rule, 1 open rule), oldest first:
   br-U02  observed (since 2026-09-25, …)
   br-B22  open, 3 questions (since 2026-10-02, …)
 
