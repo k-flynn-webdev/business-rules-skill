@@ -2,12 +2,12 @@
 name: "business-rules-ledger"
 description: Capture product intents, business rules and their tests in a business rules ledger — a living, grep-able source of truth that code and tests conform to, with each rule's enforcement computed from the code. Use whenever the user wants to write down a rule, decision, invariant or intent ("add a rule", "write this down", "how should this behave", "what's the rule for X"); describes what the system should or shouldn't do while working on tickets, bugs or features; asks for a spec, requirements or acceptance criteria; wants a ledger built from a codebase; or mentions a rules ledger, intents, br- IDs or rule-driven development. Also use for "grill me" or settling open rules; "intent review" or confirming observed rules; "fresh eyes" or reviewing the ledger; asking which rules are enforced, what's left, or to check the ledger against the code; and "read me the rules", "audio" or "listen". Prefer this over a prose spec.
 metadata:
-  version: "2.7.0"
+  version: "2.7.1"
 ---
 
 # Business Rules Ledger
 
-Version 2.7.0. See the changelog at the end.
+Version 2.7.1. See the changelog at the end.
 
 A ledger of intents and the numbered rules that serve them. An intent says what a user should be
 able to do and what would feel broken. A rule is one decision, stated in one or two sentences,
@@ -191,7 +191,7 @@ for it:
 
 kind: behaviour | serves: in-01 | given: br-B02 | status: settled
 
-When an address asks for a sign-in code within 15 minutes of its last one, then no code is sent.
+When an address asks for a sign-in code less than 15 minutes after its last one, then no code is sent.
 
 `#auth` `#security`
 
@@ -201,7 +201,7 @@ When an address asks for a sign-in code within 15 minutes of its last one, then 
 - B20.2 — Given a code sent 15 minutes ago. When the address asks again. Then a new code is sent.
 - B20.3 — Given a code sent 15 minutes 1 second ago. When the address asks again. Then a new code is sent.
 
-> Fails if one address can be sent two codes within 15 minutes.
+> Fails if one address is sent two codes less than 15 minutes apart, or is refused a code 15 minutes or more after its last one.
 
 **Source**
 
@@ -548,9 +548,13 @@ review mode read the tests of any `attended: required` rule against its Fails if
   files or directories, comma-separated, and detects each format from its content. A test ID with
   any failing result, such as one row of a data-driven test, is not passing
 - lists what is waiting on the owner: observed intents, observed rules and open rules, oldest
-  first, with each one's latest source date and its number of open questions
+  first, with their counts and each one's number of open questions. An observed entry is dated
+  from its oldest source line (when it was read), an open rule from its newest. It shows the 10
+  oldest; `--waiting` lists them all
 - checks the other Markdown files in the ledger's folder (specs, briefs, notes): an ID that names
-  no rule or intent is a warning, and so is a document that names no intent (br-M30)
+  no rule or intent is a warning on its line. Documents that name no intent are listed together
+  in one warning (br-M30). A document that is not a product spec, such as a component or style
+  guide, opts out with `<!-- ledger: not a spec -->`
 - lints the ledger: missing kinds, `serves:` and `given:` pointing at nothing, rules over two
   sentences without `compound:`, missing Fails if lines, cited IDs with no rule, an observed rule
   with a `gap:` (br-M28), attended on more than a third of the rules (br-M19), and a leftover
@@ -696,9 +700,9 @@ The document header states the format version. When opening a ledger with an old
 no version, say so and offer to upgrade it. Do not upgrade without asking. List the changes the
 upgrade would make before making them.
 
-Upgrading 2.x to 2.7.0 is mechanical; no rule changes:
+Upgrading 2.x to 2.7.1 is mechanical; no rule changes:
 
-1. Set `Format: business-rules-ledger 2.7.0`.
+1. Set `Format: business-rules-ledger 2.7.1`.
 2. Install `assets/business-rules-authoring.md` as `BUSINESS-RULES-AUTHORING.md` next to the ledger.
 3. Replace the `How to write rules (br-M)` section with the template's `How to read this ledger`
    section, and point the header line at `BUSINESS-RULES-AUTHORING.md`.
@@ -727,10 +731,14 @@ Upgrading 2.x to 2.7.0 is mechanical; no rule changes:
     Markdown beside the ledger. Give an observed rule a dated source line if it has none. Fix or
     retire documents the checker says name nothing, and recommend running the checker in CI if
     nothing runs it.
+11. From 2.7.0: reinstall the checker. The format is unchanged. The waiting list shows the 10
+    oldest (`--waiting` for all) and dates observed entries from when they were read. Documents
+    that name no intent come as one warning; mark any that are not product specs with
+    `<!-- ledger: not a spec -->` rather than leaving the warning standing.
 
-Upgrading 1.x to 2.7.0, in stages the user can stop between:
+Upgrading 1.x to 2.7.1, in stages the user can stop between:
 
-1. Set `Format: business-rules-ledger 2.7.0`. Do steps 2 to 4, 6, 8, 9 and 10 of the 2.x upgrade above.
+1. Set `Format: business-rules-ledger 2.7.1`. Do steps 2 to 4, 6 and 8 to 11 of the 2.x upgrade above.
 2. Add the Intents and Glossary sections. Draft intents from the existing rules and their
    sources, mark them `observed`, and confirm them with the user one at a time.
 3. Add `kind:` and `serves:` to every rule. Propose both; ask only where unclear.
@@ -760,9 +768,12 @@ them to close.
 - **Offer one next step, not a menu.** Observed entries: offer an intent review. Open rules:
   offer a grill session. Say how long the oldest has waited. A week is long enough to raise it
   unprompted.
-- **Name documents the ledger contradicts.** When the checker warns that a document beside the
-  ledger names no intent, say which. A plan or brief written before the ledger usually describes
-  an older system, and it sits next to a file that calls itself the source of truth.
+- **Name documents the ledger contradicts.** When the checker warns that documents beside the
+  ledger name no intent, say which. A plan or brief written before the ledger usually describes
+  an older system, and it sits next to a file that calls itself the source of truth. Ask the owner
+  for each: fix it to cite the ledger, move it out, or, if it is not a product spec at all (a
+  component or style guide), mark it `<!-- ledger: not a spec -->`. Do not add the marker to
+  silence a spec that disagrees with the ledger.
 - **Check whether the checker is wired in.** If no CI step or hook runs it, recommend it once, as
   in _Wiring it in_. Enforcement that relies on someone remembering it decays first.
 
@@ -792,7 +803,7 @@ Use this order exactly:
 
 Source of truth. Code and tests conform to this document.
 Written under the authoring rules in [`BUSINESS-RULES-AUTHORING.md`](BUSINESS-RULES-AUTHORING.md).
-Format: business-rules-ledger 2.7.0
+Format: business-rules-ledger 2.7.1
 
 ## Intents
 
@@ -923,6 +934,7 @@ is now true. Do not write the new one and leave both standing.
 
 ## Changelog
 
+- **2.7.1** — 2026-10-12 — The 2.7.0 report, tuned on a 54-rule ledger built from code. _Waiting on the owner_ shows the 10 oldest entries with counts by kind (`--waiting` lists all), instead of 60 lines on every run. An observed entry is dated from its oldest source line, when it was read, so an amendment no longer resets its age; an open rule still dates from its newest. Ages use the local date, as ledger dates do. Documents that name no intent come as one warning, and a document that is not a product spec opts out with `<!-- ledger: not a spec -->`. Upgrade step 11. The smallest-complete-rule example (br-B20) says "less than 15 minutes" instead of "within", so its statement and Fails if agree with its test at exactly 15 minutes.
 - **2.7.0** — 2026-10-11 — Nothing waits silently. The checker lists what is waiting on the owner (observed intents, observed and open rules) oldest first, with the date of each entry's latest source line and its open-question count, and counts intents by status in the summary. It checks the other Markdown beside the ledger: an ID that names nothing is a warning, and so is a document that names no intent (br-M30). An observed rule's source starts with the date it was read. _Open rules_ says what to do on opening a ledger: run the checker, offer one next step, name contradicting documents, and recommend wiring the checker in if nothing runs it. No ledger change needed; reinstall the checker.
 - **2.6.0** — 2026-10-09 — Easier rule creation, shorter rules. New _The smallest complete rule_ and _Which tests to write_ under _Capturing a rule_: a test earns its ID only when it can fail for its own reason (new br-M32). Lite specs are defined (new br-M33, new asset `assets/lite-spec-template.md`): one page per area, holding the flow, cross-rule reasoning and mechanism, so rules keep only what decides. New _Batch answers_: grill, intent review and review can take numbered answers in one message. _Building a ledger from a codebase_ now agrees scope first and applies the notice check while capturing. br-M10 amended: an observed rule may carry open questions. br-M19 amended: attended is proposed in intent review, not while building from code. br-M28 amended: an observed rule has no gap; a concern is a `suspect:` note. Review mode checks duplicate tests and gaps that are not gaps. The checker warns about an observed rule with a gap and about attended on more than a third of rules. Upgrade step 9. Lessons from building a 54-rule ledger from a template app.
 - **2.5.0** — 2026-10-08 — Less to write twice. The checker builds the whole index from the rule entries (`--write`), so a rule's statement, serves, tags and status are written once (br-M09, br-M29 amended); `--verify` compares the whole index, and the index-agreement lints are gone. Recent changes is removed: history lives in source lines and git (br-M15, br-M16 retired); the checker warns if the section is left. Rows of an examples or decision table are tests, with the test ID in the first column, and are not repeated as Given/When/Then lines (br-M17, M25, M26 amended); the checker reads test IDs from table rows. A design note points at a document that owns the detail instead of restating it (br-M22 amended). New _History_ and _The index_ sections replace _Recording changes_ and _Maintaining the index_. The authoring file is renamed `BUSINESS-RULES-AUTHORING.md` (asset `assets/business-rules-authoring.md`), so it sorts beside `BUSINESS-RULES.md`; the checker warns when a ledger still links the old name. A rule's short fields share one line, separated by ` | ` (`kind: behaviour | serves: in-01 | status: settled`); `gap:` and `compound:` keep their own lines. Both scripts read either form. Upgrade step 8.

@@ -46,7 +46,7 @@ Settled rules not yet passing:
     br-D01  none — missing tests: D01.1, D01.2
     br-D02  cited — missing tests: D02.4
   …
-Waiting on the owner (5), oldest first:
+Waiting on the owner (5 observed intents), oldest first:
   in-01   observed (since 2026-10-01, …)
   in-03   observed (since 2026-10-01, …)
   …
@@ -54,7 +54,7 @@ Known gaps:
   br-D02  the parser keeps `> ` lines that have no `##` heading above them, as a quote with no category.
 
 Warnings (1):
-  specs/ARCHITECTURE.md: names no intent. …
+  1 document beside the ledger names no intent: specs/ARCHITECTURE.md. …
 ```
 
 ## What the report says

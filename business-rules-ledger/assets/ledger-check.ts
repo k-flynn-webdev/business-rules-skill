@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 /**
  * Checks a business rules ledger against the codebase, lints it, and computes each rule's enforcement.
- * Version 2.7.0 — ships with the business-rules-ledger skill. Reinstall from the skill to update.
+ * Version 2.7.1 — ships with the business-rules-ledger skill. Reinstall from the skill to update.
  *
  * Usage:
  *   npx tsx scripts/ledger-check.ts                         report only
@@ -11,6 +11,7 @@
  *                                                            Files or directories, comma-separated.
  *   npx tsx scripts/ledger-check.ts --require=tested        exit 1 if a settled rule is below this level
  *   npx tsx scripts/ledger-check.ts --verify                exit 1 if the index is out of date
+ *   npx tsx scripts/ledger-check.ts --waiting               list everything waiting on the owner, not only the oldest 10
  *   npx tsx scripts/ledger-check.ts --tag                   list every tag with how many rules and intents carry it
  *   npx tsx scripts/ledger-check.ts --tag=boilerplate       list the rules and intents carrying that tag
  *   npx tsx scripts/ledger-check.ts [ledger] --root=.       ledger defaults to specs/BUSINESS-RULES.md
@@ -106,6 +107,12 @@ const RESULTS = flag("results");
 const REQUIRE = flag("require") as Level | undefined;
 const WRITE = args.includes("--write");
 const VERIFY = args.includes("--verify");
+const ALL_WAITING = args.includes("--waiting");
+// How many waiting entries the report shows before "and N more".
+const WAITING_SHOWN = 10;
+// A document beside the ledger that is not a product spec (a component or style guide, say)
+// carries this marker, so the checker does not ask it to name an intent.
+const NOT_A_SPEC = /<!--\s*ledger:\s*not a spec\s*-->/i;
 
 if (REQUIRE && !LEVELS.includes(REQUIRE)) {
   console.error(`--require must be one of: ${LEVELS.join(", ")}`);
@@ -121,7 +128,9 @@ interface Rule {
   hasOpenQuestions: boolean;
   openQuestions: number;
   tags: string[];
-  // The newest date in the entry's source lines, so the report can say how long it has waited.
+  // The oldest and newest dates in the entry's source lines. An observed entry has waited since
+  // it was read (the oldest); an open rule since its latest change (the newest).
+  firstSource: string;
   lastSource: string;
 }
 
@@ -130,6 +139,7 @@ interface Intent {
   statement: string;
   fields: Record<string, string>;
   tags: string[];
+  firstSource: string;
   lastSource: string;
 }
 
@@ -152,6 +162,7 @@ function fieldLines(line: string, names: string[]): [string, string][] | null {
 // A source line starts with its date: "- 2026-09-24, grill session. …".
 const SOURCE_DATE = /^-\s+(\d{4}-\d{2}-\d{2})\b/;
 const newer = (a: string, b: string) => (b > a ? b : a);
+const older = (a: string, b: string) => (!a || b < a ? b : a);
 
 function parseLedger(content: string) {
   const rules: Rule[] = [];
@@ -188,13 +199,14 @@ function parseLedger(content: string) {
         hasOpenQuestions: false,
         openQuestions: 0,
         tags: [],
+        firstSource: "",
         lastSource: "",
       };
       continue;
     }
     if (intentHead) {
       close();
-      intent = { id: intentHead[1], statement: "", fields: {}, tags: [], lastSource: "" };
+      intent = { id: intentHead[1], statement: "", fields: {}, tags: [], firstSource: "", lastSource: "" };
       continue;
     }
     if (/^#{1,3} /.test(raw)) {
@@ -205,6 +217,7 @@ function parseLedger(content: string) {
     if (intent) {
       const date = line.match(SOURCE_DATE);
       if (date) {
+        intent.firstSource = older(intent.firstSource, date[1]);
         intent.lastSource = newer(intent.lastSource, date[1]);
         continue;
       }
@@ -251,7 +264,10 @@ function parseLedger(content: string) {
 
     if (TAG_LINE.test(line)) r.tags = tagsOf(line);
     const date = line.match(SOURCE_DATE);
-    if (date) r.lastSource = newer(r.lastSource, date[1]);
+    if (date) {
+      r.firstSource = older(r.firstSource, date[1]);
+      r.lastSource = newer(r.lastSource, date[1]);
+    }
     if (/^\*\*/.test(line)) inQuestions = false;
     if (/^\*\*Open questions\*\*/.test(line)) {
       r.hasOpenQuestions = true;
@@ -583,10 +599,12 @@ function checkDocs(ruleIds: Set<string>, intentIds: Set<string>) {
     }
   };
   find(dirname(LEDGER));
+  const unnamed: string[] = [];
   for (const doc of docs) {
     const where = relative(ROOT, doc);
     let intents = 0;
-    readFileSync(doc, "utf8").split("\n").forEach((text, i) => {
+    const body = readFileSync(doc, "utf8");
+    body.split("\n").forEach((text, i) => {
       for (const m of text.matchAll(/\b(br-[A-Z]\d{2}|in-\d{2})\b/g)) {
         const id = m[1];
         if (id.startsWith("in-")) {
@@ -596,11 +614,13 @@ function checkDocs(ruleIds: Set<string>, intentIds: Set<string>) {
           warnings.push(`${where}:${i + 1}: ${id} is not a rule.`);
       }
     });
-    if (intents === 0)
-      warnings.push(
-        `${where}: names no intent. A spec beside the ledger names the intents it serves and cites a rule for each decision (br-M30); otherwise move it or fold it in.`,
-      );
+    if (intents === 0 && !NOT_A_SPEC.test(body)) unnamed.push(where);
   }
+  // One warning for all of them: a folder of old specs should not bury the rest of the report.
+  if (unnamed.length)
+    warnings.push(
+      `${unnamed.length} document${unnamed.length === 1 ? "" : "s"} beside the ledger name${unnamed.length === 1 ? "s" : ""} no intent: ${unnamed.join(", ")}. A spec names the intents it serves and cites a rule for each decision (br-M30). Fix it, move it, or mark a document that is not a product spec with <!-- ledger: not a spec -->.`,
+    );
   return docs.length;
 }
 
@@ -899,19 +919,38 @@ function main() {
     ...active.filter((r) => r.fields.status === "observed" || r.fields.status === "open"),
   ];
   if (waiting.length) {
-    out.push("", `Waiting on the owner (${waiting.length}), oldest first:`);
-    const today = new Date().toISOString().slice(0, 10);
+    // An observed entry has waited since it was read; an open rule since it last changed.
+    const since = (e: Rule | Intent) =>
+      e.fields.status === "observed" ? e.firstSource : e.lastSource;
+    // Ledger dates are the writer's local dates, so today is local too.
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
     const age = (d: string) => {
       if (!d) return "no dated source";
       const days = Math.round((Date.parse(today) - Date.parse(d)) / 86_400_000);
       return `since ${d}, ${days} day${days === 1 ? "" : "s"}`;
     };
-    for (const e of [...waiting].sort((a, b) => a.lastSource.localeCompare(b.lastSource))) {
+    const kinds = [
+      [intents.filter((i) => i.fields.status === "observed").length, "observed intent"],
+      [active.filter((r) => r.fields.status === "observed").length, "observed rule"],
+      [active.filter((r) => r.fields.status === "open").length, "open rule"],
+    ] as const;
+    const breakdown = kinds
+      .filter(([n]) => n > 0)
+      .map(([n, k]) => `${n} ${k}${n === 1 ? "" : "s"}`)
+      .join(", ");
+    out.push("", `Waiting on the owner (${breakdown}), oldest first:`);
+    const sorted = [...waiting].sort((a, b) => since(a).localeCompare(since(b)));
+    const shown = ALL_WAITING ? sorted : sorted.slice(0, WAITING_SHOWN);
+    for (const e of shown) {
       const status = e.fields.status;
       const questions =
         "openQuestions" in e && e.openQuestions ? `, ${e.openQuestions} question${e.openQuestions === 1 ? "" : "s"}` : "";
-      out.push(`  ${e.id.padEnd(6)}  ${status}${questions} (${age(e.lastSource)})`);
+      out.push(`  ${e.id.padEnd(6)}  ${status}${questions} (${age(since(e))})`);
     }
+    if (shown.length < sorted.length)
+      out.push(`  … and ${sorted.length - shown.length} more. Run with --waiting to list them all.`);
     out.push(
       "  Observed entries close in intent review, open ones in a grill session. Ask the owner which to start.",
     );
