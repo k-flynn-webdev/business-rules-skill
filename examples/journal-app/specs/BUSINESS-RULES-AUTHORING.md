@@ -1,7 +1,7 @@
 # Ledger authoring rules (br-M)
 
 The rules for writing and amending the business rules ledger in this folder.
-Format: business-rules-ledger 2.6.0
+Format: business-rules-ledger 2.7.0
 
 Read these before adding or changing any rule, intent or glossary entry. To read the ledger, the
 _How to read this ledger_ section in the ledger itself is enough.

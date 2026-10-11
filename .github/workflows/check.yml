@@ -10,19 +10,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Skill agrees with itself
+        run: ./scripts/check.sh
+
+  example:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        example: [journal-app, quote-app]
+    defaults:
+      run:
+        working-directory: examples/${{ matrix.example }}
+    steps:
+      - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: examples/journal-app/package-lock.json
-      - name: Skill agrees with itself
-        run: ./scripts/check.sh
-      - name: Example installs, type-checks and tests
-        working-directory: examples/journal-app
+          cache-dependency-path: examples/${{ matrix.example }}/package-lock.json
+      - name: Installs, type-checks and tests
         run: |
           npm ci
           npm run typecheck
           npm test
-      - name: Example ledger index is current
-        working-directory: examples/journal-app
+      - name: Ledger index is current
         run: npm run ledger:verify

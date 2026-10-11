@@ -108,3 +108,7 @@ The two `lite-spec-*.md` files are what a spec looks like next to a ledger. Each
 intents it serves, explains how its area fits together, and cites a rule for every decision it
 mentions. They own detail the ledger points at (how the anniversary card looks, how streaks will
 be stored), and they decide nothing.
+
+The checker reads them too. A rule or intent ID that names nothing is a warning, and so is a
+document beside the ledger that names no intent: usually an old spec nobody has updated. The
+[quote-app example](../quote-app) has one.

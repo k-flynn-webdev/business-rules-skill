@@ -94,8 +94,9 @@ business-rules-ledger/        the skill: install this folder
     └── lite-spec-template.md         a one-page overview of an area, beside the ledger
 
 examples/journal-app/         a small app built against a ledger. Start here.
+examples/quote-app/           a ledger written after the app shipped, with what the checker finds
 scripts/package.sh            builds dist/business-rules-ledger-<version>.zip
-scripts/check.sh              one version everywhere; the example's copies match the assets (--fix syncs)
+scripts/check.sh              one version everywhere; each example's copies match the assets (--fix syncs)
 ```
 
 ## Install
@@ -103,7 +104,7 @@ scripts/check.sh              one version everywhere; the example's copies match
 Build the zip, or download it from the repo's releases when there is one:
 
 ```sh
-./scripts/package.sh        # → dist/business-rules-ledger-2.6.0.zip
+./scripts/package.sh        # → dist/business-rules-ledger-2.7.0.zip
 ```
 
 - **Claude apps (claude.ai, Desktop):** upload the zip as a custom skill in Claude's settings,
@@ -147,7 +148,7 @@ It reads Jest and Vitest JSON, TRX (`dotnet test --logger trx`) and JUnit XML (p
 gotestsum), so it works across a TypeScript front end and a .NET or Python back end in one repo.
 In CI, run the tests with a results file and then `--verify --require=tested`.
 
-## The example
+## The examples
 
 [`examples/journal-app`](examples/journal-app) is the quickest way to see it working. It is the
 domain logic of a journaling app, adapted from the production app this skill was built on: 17
@@ -155,11 +156,20 @@ rules across five intents, real sources, real code and 36 tests. `npm ci && npm 
 rebuilds its index and shows every enforcement level, plus open, observed and retired rules.
 Its README is a guided tour, rule by rule.
 
+[`examples/quote-app`](examples/quote-app) is the other common case: an app that shipped first,
+with a ledger written during and after the build. It is a quote-of-the-day app, renamed from a
+real one, with its real ledger upgraded to the current format. Its report shows what a ledger
+catches on an existing app: rules settled on intents nobody confirmed, page rules nothing
+tests, a gap the first checker run found, and an old spec beside the ledger that contradicts it.
+
 ## Versions
 
-The skill is at **2.6.0**. Every ledger states its format (`Format: business-rules-ledger 2.6.0`),
+The skill is at **2.7.0**. Every ledger states its format (`Format: business-rules-ledger 2.7.0`),
 and the skill offers to upgrade an older ledger, listing the changes first. The changelog is at
 the end of [`SKILL.md`](business-rules-ledger/SKILL.md).
+
+2.7.0 makes sure nothing waits silently: the checker lists what is waiting on the owner, oldest
+first, and checks the other documents beside the ledger for IDs that name nothing.
 
 2.6.0 makes rules quicker to write and shorter to read: a smallest-complete-rule template, a test
 only where it can fail for its own reason, lite specs to hold the flow and mechanism of an area,

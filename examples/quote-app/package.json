@@ -1,0 +1,20 @@
+{
+    "name": "quote-app-example",
+    "private": true,
+    "description": "A quote-of-the-day app's domain logic, with a ledger built after the app existed.",
+    "type": "module",
+    "scripts": {
+        "test": "vitest run",
+        "typecheck": "tsc",
+        "test:results": "vitest run --reporter=json --outputFile=test-results.json",
+        "ledger": "npm run test:results; tsx scripts/ledger-check.ts --results=test-results.json --write",
+        "ledger:verify": "npm run test:results && tsx scripts/ledger-check.ts --results=test-results.json --verify",
+        "ledger:audio": "tsx scripts/audio-ledger.ts"
+    },
+    "devDependencies": {
+        "@types/node": "26.6.2",
+        "tsx": "4.23.15",
+        "typescript": "6.0.3",
+        "vitest": "5.0.1"
+    }
+}

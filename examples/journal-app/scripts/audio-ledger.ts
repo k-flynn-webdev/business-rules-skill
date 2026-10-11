@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 /**
  * Generates a listening-friendly script from the business rules ledger: each intent, then the rules that serve it.
- * Version 2.6.0 — ships with the business-rules-ledger skill. Reinstall from the skill to update.
+ * Version 2.7.0 — ships with the business-rules-ledger skill. Reinstall from the skill to update.
  *
  * Usage:
  *   npx tsx scripts/audio-ledger.ts              — print to stdout
