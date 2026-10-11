@@ -1,0 +1,28 @@
+name: check
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: examples/journal-app/package-lock.json
+      - name: Skill agrees with itself
+        run: ./scripts/check.sh
+      - name: Example installs, type-checks and tests
+        working-directory: examples/journal-app
+        run: |
+          npm ci
+          npm run typecheck
+          npm test
+      - name: Example ledger index is current
+        working-directory: examples/journal-app
+        run: npm run ledger:verify
