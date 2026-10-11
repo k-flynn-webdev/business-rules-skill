@@ -36,8 +36,9 @@ npm run ledger:audio     # a listening script of the intents and rules
 `npm run ledger` prints a report like this:
 
 ```
-Rules: 17 active (1 observed, 1 open, 15 settled), 1 retired. Intents: 5.
+Rules: 17 active (1 observed, 1 open, 15 settled), 1 retired. Intents: 5 (5 settled).
 Settled enforcement: 5 none, 1 cited, 0 tested, 9 passing.
+Other documents beside the ledger: 2 checked for rule and intent IDs.
 
 Settled rules not yet passing:
   in-04
@@ -46,13 +47,18 @@ Settled rules not yet passing:
   in-03
     br-B14  none, gap — missing tests: B14.1, B14.2
   …
+Waiting on the owner (2), oldest first:
+  br-U02  observed (since 2026-09-25, …)
+  br-B22  open, 3 questions (since 2026-10-02, …)
+
 Known gaps:
   br-B14  no erasure script exists; requests would be handled by hand.
   br-D05  the admin track browser shows track text.
 ```
 
-That report is the work list. Every settled rule that is not `passing` is work left, and every
-`gap` is a known way the code does not do what the rule says yet.
+That report is the work list. Every settled rule that is not `passing` is work left, every
+`gap` is a known way the code does not do what the rule says yet, and everything waiting on the
+owner is a decision nobody has made.
 
 ## A tour of the ledger
 
@@ -102,3 +108,7 @@ The two `lite-spec-*.md` files are what a spec looks like next to a ledger. Each
 intents it serves, explains how its area fits together, and cites a rule for every decision it
 mentions. They own detail the ledger points at (how the anniversary card looks, how streaks will
 be stored), and they decide nothing.
+
+The checker reads them too. A rule or intent ID that names nothing is a warning, and so is a
+document beside the ledger that names no intent: usually an old spec nobody has updated. The
+[quote-app example](../quote-app) has one.

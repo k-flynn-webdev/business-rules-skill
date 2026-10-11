@@ -1,6 +1,6 @@
 ---
 metadata:
-  version: "2.5.0"
+  version: "2.7.0"
 ---
 
 # The Business Rules Ledger
@@ -23,6 +23,8 @@ because everyone knows they're stale.
 That doesn't mean specs have no place. A spec still works well as the readable overview of a
 feature — how the parts fit, what to look at first — as long as it names the intents it serves
 and cites the rule for every decision it mentions. The spec explains; the rules decide.
+The skill's short form of this is a **lite spec**: one page per area, beside the ledger, that holds
+the flow and the mechanism so each rule can stay a few lines long.
 
 ## Why not just tests?
 
@@ -130,8 +132,10 @@ own sake.
 1. Copy `assets/ledger-template.md` into your repo as `specs/BUSINESS-RULES.md`, and
    `assets/business-rules-authoring.md` next to it as `BUSINESS-RULES-AUTHORING.md`.
 2. Write your intents first — what a user should be able to do, and what "broken" looks like.
-3. Add rules as decisions come up. You don't need a complete ledger on day one.
-4. Install the checker and run it. Add it to CI once you have enough rules to care.
+3. Add rules as decisions come up. You don't need a complete ledger on day one. A rule needs
+   only a statement, a kind, the intent it serves, tags, a few tests, a Fails if line and a source.
+4. When an area grows past about eight rules, add a lite spec from `assets/lite-spec-template.md`.
+5. Install the checker and run it. Add it to CI once you have enough rules to care.
 
 The full reference — authoring rules, the modes for grilling open rules and reviewing a ledger,
 the checker's options, and test naming for each stack — is in `SKILL.md`.
