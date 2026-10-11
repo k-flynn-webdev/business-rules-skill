@@ -191,7 +191,7 @@ for it:
 
 kind: behaviour | serves: in-01 | given: br-B02 | status: settled
 
-When an address asks for a sign-in code within 15 minutes of its last one, then no code is sent.
+When an address asks for a sign-in code less than 15 minutes after its last one, then no code is sent.
 
 `#auth` `#security`
 
@@ -201,7 +201,7 @@ When an address asks for a sign-in code within 15 minutes of its last one, then 
 - B20.2 — Given a code sent 15 minutes ago. When the address asks again. Then a new code is sent.
 - B20.3 — Given a code sent 15 minutes 1 second ago. When the address asks again. Then a new code is sent.
 
-> Fails if one address can be sent two codes within 15 minutes.
+> Fails if one address is sent two codes less than 15 minutes apart, or is refused a code 15 minutes or more after its last one.
 
 **Source**
 
@@ -934,7 +934,7 @@ is now true. Do not write the new one and leave both standing.
 
 ## Changelog
 
-- **2.7.1** — 2026-10-12 — The 2.7.0 report, tuned on a 54-rule ledger built from code. _Waiting on the owner_ shows the 10 oldest entries with counts by kind (`--waiting` lists all), instead of 60 lines on every run. An observed entry is dated from its oldest source line, when it was read, so an amendment no longer resets its age; an open rule still dates from its newest. Ages use the local date, as ledger dates do. Documents that name no intent come as one warning, and a document that is not a product spec opts out with `<!-- ledger: not a spec -->`. Upgrade step 11.
+- **2.7.1** — 2026-10-12 — The 2.7.0 report, tuned on a 54-rule ledger built from code. _Waiting on the owner_ shows the 10 oldest entries with counts by kind (`--waiting` lists all), instead of 60 lines on every run. An observed entry is dated from its oldest source line, when it was read, so an amendment no longer resets its age; an open rule still dates from its newest. Ages use the local date, as ledger dates do. Documents that name no intent come as one warning, and a document that is not a product spec opts out with `<!-- ledger: not a spec -->`. Upgrade step 11. The smallest-complete-rule example (br-B20) says "less than 15 minutes" instead of "within", so its statement and Fails if agree with its test at exactly 15 minutes.
 - **2.7.0** — 2026-10-11 — Nothing waits silently. The checker lists what is waiting on the owner (observed intents, observed and open rules) oldest first, with the date of each entry's latest source line and its open-question count, and counts intents by status in the summary. It checks the other Markdown beside the ledger: an ID that names nothing is a warning, and so is a document that names no intent (br-M30). An observed rule's source starts with the date it was read. _Open rules_ says what to do on opening a ledger: run the checker, offer one next step, name contradicting documents, and recommend wiring the checker in if nothing runs it. No ledger change needed; reinstall the checker.
 - **2.6.0** — 2026-10-09 — Easier rule creation, shorter rules. New _The smallest complete rule_ and _Which tests to write_ under _Capturing a rule_: a test earns its ID only when it can fail for its own reason (new br-M32). Lite specs are defined (new br-M33, new asset `assets/lite-spec-template.md`): one page per area, holding the flow, cross-rule reasoning and mechanism, so rules keep only what decides. New _Batch answers_: grill, intent review and review can take numbered answers in one message. _Building a ledger from a codebase_ now agrees scope first and applies the notice check while capturing. br-M10 amended: an observed rule may carry open questions. br-M19 amended: attended is proposed in intent review, not while building from code. br-M28 amended: an observed rule has no gap; a concern is a `suspect:` note. Review mode checks duplicate tests and gaps that are not gaps. The checker warns about an observed rule with a gap and about attended on more than a third of rules. Upgrade step 9. Lessons from building a 54-rule ledger from a template app.
 - **2.5.0** — 2026-10-08 — Less to write twice. The checker builds the whole index from the rule entries (`--write`), so a rule's statement, serves, tags and status are written once (br-M09, br-M29 amended); `--verify` compares the whole index, and the index-agreement lints are gone. Recent changes is removed: history lives in source lines and git (br-M15, br-M16 retired); the checker warns if the section is left. Rows of an examples or decision table are tests, with the test ID in the first column, and are not repeated as Given/When/Then lines (br-M17, M25, M26 amended); the checker reads test IDs from table rows. A design note points at a document that owns the detail instead of restating it (br-M22 amended). New _History_ and _The index_ sections replace _Recording changes_ and _Maintaining the index_. The authoring file is renamed `BUSINESS-RULES-AUTHORING.md` (asset `assets/business-rules-authoring.md`), so it sorts beside `BUSINESS-RULES.md`; the checker warns when a ledger still links the old name. A rule's short fields share one line, separated by ` | ` (`kind: behaviour | serves: in-01 | status: settled`); `gap:` and `compound:` keep their own lines. Both scripts read either form. Upgrade step 8.
