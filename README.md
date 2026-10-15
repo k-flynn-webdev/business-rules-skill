@@ -42,7 +42,7 @@ that mentions the decision cites its ID instead of restating it.
 
 Consolidating decisions this way buys four things:
 
-- **One place to look.** `git grep -n "br-B02"` returns the rule, the code that enforces it and the
+- **One place to look.** `git grep -nw "br-B02"` returns the rule, the code that enforces it and the
   tests that prove it. You, a reviewer and an agent all read the same answer.
 - **One place to change.** Amend the rule, and every document that cites it is still right. A
   decision that is copied into a spec and a ticket is three edits, and someone forgets one.
@@ -149,7 +149,7 @@ if (text.length > MAX_CHARS) return { ok: false, error: `Keep it to ${MAX_CHARS}
 it("br-B02.7 100 emoji, 200 characters, are allowed", () => { … });
 ```
 
-`git grep -n "br-B02"` returns the rule, the code and the tests together. It searches only
+`git grep -nw "br-B02"` returns the rule, the code and the tests together. It searches only
 files git tracks, so `node_modules` and test-result files stay out of the answer. The checker reads the same
 IDs and writes each rule's enforcement into the ledger's index:
 
@@ -159,6 +159,21 @@ IDs and writes each rule's enforcement into the ledger's index:
 | `cited`     | Code cites it, but not every test in the ledger exists.    |
 | `tested`    | Every test in the ledger has a test named after it.        |
 | `passing`   | Those tests ran and passed in the results you gave it.     |
+
+### Searching by ID
+
+Each place an ID appears has its own shape, so you can search for one kind at a time:
+
+| You want                              | Shape                       | Command |
+| ------------------------------------- | --------------------------- | ------- |
+| Everything about the rule             | `br-B02` anywhere           | `git grep -nw "br-B02"` |
+| Just the rule, as written             | the `## br-B02` heading     | `awk '/^## br-B02$/{p=1} p&&/^## /&&!/^## br-B02$/{exit} p' specs/BUSINESS-RULES.md` |
+| The code that enforces it (citations) | `br-B02:` or `@see br-B02`  | `git grep -nE "br-B02:\|@see +br-B02([^.0-9]\|$)" -- ':!*.md'` |
+| Its tests                             | `br-B02.1`, `br-B02.2`, …   | `git grep -nE "br-B02\.[0-9]+" -- ':!*.md'` |
+
+`-w` stops `br-B02` matching `br-B020`. `-- ':!*.md'` leaves out the ledger and other documents,
+so the last two return only code. The citation shape is the same one the checker counts: an ID
+with no colon and no `@see` is a mention, not a citation, and does not count as enforcement.
 
 ## What's in this repo
 
