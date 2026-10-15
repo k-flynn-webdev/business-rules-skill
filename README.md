@@ -61,16 +61,16 @@ Consolidating decisions does not mean putting everything in the ledger. A ledger
 explanation, mechanism and design becomes the long prose spec it was meant to replace. So each
 kind of thing has its own home, and only one of them decides:
 
-| Question                         | Lives in                                   | Decides? |
-| -------------------------------- | ------------------------------------------ | -------- |
-| Why does this exist?             | **Intents**, at the top of the ledger      | No — rules serve them |
-| What must the product do?        | **Rules**, in the ledger                   | **Yes**  |
-| Is it true yet?                  | **Enforcement**, computed by the checker   | No — it measures |
-| How is it built?                 | **Design notes** under the rule, or the lite spec when longer | No |
-| How does this area fit together? | **Lite spec**, one page per area           | No — it cites rules |
-| How does it look?                | **Lite spec**, or a design guide it links to | No |
-| Fine detail another team owns    | Visual specs, API specs, design guides     | No — design notes point at them |
-| What work is planned?            | **Tickets**, in your tracker               | No — they cite rules |
+| Question                         | Lives in                                                      | Decides?                        |
+| -------------------------------- | ------------------------------------------------------------- | ------------------------------- |
+| Why does this exist?             | **Intents**, at the top of the ledger                         | No — rules serve them           |
+| What must the product do?        | **Rules**, in the ledger                                      | **Yes**                         |
+| Is it true yet?                  | **Enforcement**, computed by the checker                      | No — it measures                |
+| How is it built?                 | **Design notes** under the rule, or the lite spec when longer | No                              |
+| How does this area fit together? | **Lite spec**, one page per area                              | No — it cites rules             |
+| How does it look?                | **Lite spec**, or a design guide it links to                  | No                              |
+| Fine detail another team owns    | Visual specs, API specs, design guides                        | No — design notes point at them |
+| What work is planned?            | **Tickets**, in your tracker                                  | No — they cite rules            |
 
 **Lite specs are encouraged.** A lite spec is a one-page overview of one area, beside the
 ledger: what the area is for, how its parts fit, the reasoning that spans several rules, and the
@@ -80,8 +80,8 @@ cites the rule that holds it, and a decision with no rule ID is a missing rule.
 **UI and visual design go in the lite spec, not the ledger.** Layout, spacing, colour, type and
 component choice are not logic, and a rule about them would be tested by eye, not by code. What
 the user relies on stays a rule: that an error is shown, when a button is disabled, the wording
-when the wording is a decision. The test is simple: if the product would *behave* differently,
-it is a rule; if it would only *look* different, it belongs in the lite spec.
+when the wording is a decision. The test is simple: if the product would _behave_ differently,
+it is a rule; if it would only _look_ different, it belongs in the lite spec.
 
 So the ledger stays short and strict, and the documents around it stay readable. The ledger
 holds the decisions. Everything else explains them.
@@ -153,23 +153,23 @@ it("br-B02.7 100 emoji, 200 characters, are allowed", () => { … });
 files git tracks, so `node_modules` and test-result files stay out of the answer. The checker reads the same
 IDs and writes each rule's enforcement into the ledger's index:
 
-| Enforcement | Meaning                                                    |
-| ----------- | ---------------------------------------------------------- |
-| `none`      | Written down. No code cites it.                            |
-| `cited`     | Code cites it, but not every test in the ledger exists.    |
-| `tested`    | Every test in the ledger has a test named after it.        |
-| `passing`   | Those tests ran and passed in the results you gave it.     |
+| Enforcement | Meaning                                                 |
+| ----------- | ------------------------------------------------------- |
+| `none`      | Written down. No code cites it.                         |
+| `cited`     | Code cites it, but not every test in the ledger exists. |
+| `tested`    | Every test in the ledger has a test named after it.     |
+| `passing`   | Those tests ran and passed in the results you gave it.  |
 
 ### Searching by ID
 
 Each place an ID appears has its own shape, so you can search for one kind at a time:
 
-| You want                              | Shape                       | Command |
-| ------------------------------------- | --------------------------- | ------- |
-| Everything about the rule             | `br-B02` anywhere           | `git grep -nw "br-B02"` |
-| Just the rule, in one line            | its row in the index        | `git grep -h "^\| br-B02 \|"` |
-| The code that enforces it (citations) | `br-B02:` or `@see br-B02`  | `git grep -nE "br-B02:\|@see +br-B02([^.0-9]\|$)" -- ':!*.md'` |
-| Its tests                             | `br-B02.1`, `br-B02.2`, …   | `git grep -nE "br-B02\.[0-9]+" -- ':!*.md'` |
+| You want                              | Shape                      | Command                                                        |
+| ------------------------------------- | -------------------------- | -------------------------------------------------------------- |
+| Everything about the rule             | `br-B02` anywhere          | `git grep -nw "br-B02"`                                        |
+| Just the rule, in one line            | its row in the index       | `git grep -h "^\| br-B02 \|"`                                  |
+| The code that enforces it (citations) | `br-B02:` or `@see br-B02` | `git grep -nE "br-B02:\|@see +br-B02([^.0-9]\|$)" -- ':!*.md'` |
+| Its tests                             | `br-B02.1`, `br-B02.2`, …  | `git grep -nE "br-B02\.[0-9]+" -- ':!*.md'`                    |
 
 The index row gives the statement, intent, tags, status and enforcement together. To print the
 whole entry, see [Advanced searches](#advanced-searches).
@@ -218,18 +218,18 @@ need only Node and `tsx`.
 
 Talk to Claude normally; the skill triggers on what you are doing.
 
-| You say                                                       | What happens                                                                                  |
-| ------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| "Write this down: blank entries should be rejected."          | Drafts the rule from your words, checks it against intents and the glossary, asks what's missing. |
-| "How should this behave when…?" while working on a ticket      | Captures the decision as a rule, `open` with questions if it isn't settled.                   |
-| "Build a ledger from this codebase."                          | Reads rules out of the code as `observed`, flags likely accidents as `suspect`.              |
-| "Intent review"                                               | Walks the observed rules with you: intended, accident (becomes a `gap`), or doesn't matter.   |
-| "Grill me"                                                    | Settles open rules until every answer is testable: one question at a time, or a numbered batch you answer in one message. |
-| "Fresh eyes" / "review the ledger"                            | Looks for rot: stale sources, undefined terms, rules over two sentences, specs that contradict rules. |
-| "What's left?" / "which rules are enforced?"                  | Runs the checker and reports settled rules below `passing`, grouped by intent, and the gaps.  |
-| "Write a spec for…"                                           | Writes a lite spec that cites a rule for every decision, capturing missing rules first.       |
-| An area grows past about eight rules                          | Offers a lite spec, so the flow, mechanism and look and feel move out and each rule stays short. |
-| "Read me the rules"                                           | Produces a listening script: each intent, then the rules that serve it.                       |
+| You say                                                   | What happens                                                                                                              |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| "Write this down: blank entries should be rejected."      | Drafts the rule from your words, checks it against intents and the glossary, asks what's missing.                         |
+| "How should this behave when…?" while working on a ticket | Captures the decision as a rule, `open` with questions if it isn't settled.                                               |
+| "Build a ledger from this codebase."                      | Reads rules out of the code as `observed`, flags likely accidents as `suspect`.                                           |
+| "Intent review"                                           | Walks the observed rules with you: intended, accident (becomes a `gap`), or doesn't matter.                               |
+| "Grill me"                                                | Settles open rules until every answer is testable: one question at a time, or a numbered batch you answer in one message. |
+| "Fresh eyes" / "review the ledger"                        | Looks for rot: stale sources, undefined terms, rules over two sentences, specs that contradict rules.                     |
+| "What's left?" / "which rules are enforced?"              | Runs the checker and reports settled rules below `passing`, grouped by intent, and the gaps.                              |
+| "Write a spec for…"                                       | Writes a lite spec that cites a rule for every decision, capturing missing rules first.                                   |
+| An area grows past about eight rules                      | Offers a lite spec, so the flow, mechanism and look and feel move out and each rule stays short.                          |
+| "Read me the rules"                                       | Produces a listening script: each intent, then the rules that serve it.                                                   |
 
 ## The checker
 
