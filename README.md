@@ -167,9 +167,12 @@ Each place an ID appears has its own shape, so you can search for one kind at a 
 | You want                              | Shape                       | Command |
 | ------------------------------------- | --------------------------- | ------- |
 | Everything about the rule             | `br-B02` anywhere           | `git grep -nw "br-B02"` |
-| Just the rule, as written             | the `## br-B02` heading     | `awk '/^## br-B02$/{p=1} p&&/^## /&&!/^## br-B02$/{exit} p' specs/BUSINESS-RULES.md` |
+| Just the rule, in one line            | its row in the index        | `git grep -h "^\| br-B02 \|"` |
 | The code that enforces it (citations) | `br-B02:` or `@see br-B02`  | `git grep -nE "br-B02:\|@see +br-B02([^.0-9]\|$)" -- ':!*.md'` |
 | Its tests                             | `br-B02.1`, `br-B02.2`, …   | `git grep -nE "br-B02\.[0-9]+" -- ':!*.md'` |
+
+The index row gives the statement, intent, tags, status and enforcement together. To print the
+whole entry, see [Advanced searches](#advanced-searches).
 
 `-w` stops `br-B02` matching `br-B020`. `-- ':!*.md'` leaves out the ledger and other documents,
 so the last two return only code. The citation shape is the same one the checker counts: an ID
@@ -277,6 +280,18 @@ and numbered batch answers for review sessions.
 2.5.0 removed most of what was written twice: the index is built from the rules, a rule's short
 fields share one line, example rows are the tests, and there is no change log inside the ledger
 (git keeps it).
+
+## Advanced searches
+
+Print a rule's whole entry, from its heading to the next rule: statement, examples, Fails if and
+source.
+
+```sh
+awk '/^## br-B02$/{p=1} p&&/^## /&&!/^## br-B02$/{exit} p' specs/BUSINESS-RULES.md
+```
+
+It starts printing at the `## br-B02` heading and stops at the next `## ` heading. Change both
+`br-B02`s to the rule you want.
 
 ## Status
 
