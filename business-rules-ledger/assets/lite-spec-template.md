@@ -32,6 +32,12 @@ for someone who has never seen the code.]
 [How it is built, where that is worth more than a line on the rule. Each rule's design note
 points here instead of restating it (br-M22).]
 
+## Look and feel
+
+[Layout, styling, components and visual states for this area, or a link to the design guide that
+holds them. Not rules: a decision about behaviour the user relies on, such as when an error
+shows, cites its rule instead.]
+
 ## Known issues
 
 [Gaps and suspects in this area, by rule ID, and where the work is tracked.]

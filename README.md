@@ -16,17 +16,76 @@ rejected or trimmed?" gets answered in a line of code, by whoever happened to wr
 answer lives nowhere else. Weeks later nobody can say whether that behaviour was chosen or
 accidental, and the agent cannot either.
 
-The usual places for decisions do not hold up:
+The decisions are there, but they are scattered. Some are in a spec, some in a ticket thread,
+some in a notes file, most only in the code. Each place fails in its own way:
 
-- **Specs** are prose. Prose cannot be falsified, so nobody checks it, and it drifts from the code
-  the week it is written.
+- **Specs** are good at explaining an area, and they still have a place beside the ledger. As the
+  only record of decisions they are weak: prose cannot be falsified, so nobody checks it, and it
+  drifts from the code soon after it is written.
 - **Tests** record what the code does, not what anyone decided, and they cannot show what is
   missing. There is no test for the rule nobody wrote.
+- **Tickets and chat** hold the reason for a decision, and then scroll away. Nobody finds them
+  again, least of all an agent.
 - **Notes files** hold the best reasoning and have the shortest half-life. Nothing ties them to
   the code.
 
+When the same decision is written in three places, the three copies drift apart, and nobody
+knows which one is true. When it is written nowhere, the next person decides it again,
+differently.
+
+## The idea: every decision in one place
+
+The ledger is the one place where decisions live. Each decision is written once, as a numbered
+rule of one or two sentences, with its tests and the reason it exists. Everything else points at
+it: the code cites the rule where it enforces it, the tests are named after it, and any document
+that mentions the decision cites its ID instead of restating it.
+
+Consolidating decisions this way buys four things:
+
+- **One place to look.** `grep -r "br-B02"` returns the rule, the code that enforces it and the
+  tests that prove it. You, a reviewer and an agent all read the same answer.
+- **One place to change.** Amend the rule, and every document that cites it is still right. A
+  decision that is copied into a spec and a ticket is three edits, and someone forgets one.
+- **A clear winner.** When a spec, a ticket or the code disagrees with the ledger, the ledger
+  wins and the other is fixed. There is no argument about which copy is current.
+- **Visible gaps.** Each rule is small enough to pass or fail on its own, so a checker can say
+  which rules the code keeps and which it does not yet. A question the ledger does not answer
+  is visible too: the agent stops and asks, and the answer becomes a rule instead of a guess.
+
 A ledger is the notes file with two things added: **an ID per decision**, and **a checker that
 keeps reporting whether the code still agrees**.
+
+## Where everything else lives
+
+Consolidating decisions does not mean putting everything in the ledger. A ledger that also holds
+explanation, mechanism and design becomes the long prose spec it was meant to replace. So each
+kind of thing has its own home, and only one of them decides:
+
+| Question                         | Lives in                                   | Decides? |
+| -------------------------------- | ------------------------------------------ | -------- |
+| Why does this exist?             | **Intents**, at the top of the ledger      | No — rules serve them |
+| What must the product do?        | **Rules**, in the ledger                   | **Yes**  |
+| Is it true yet?                  | **Enforcement**, computed by the checker   | No — it measures |
+| How is it built?                 | **Design notes** under the rule, or the lite spec when longer | No |
+| How does this area fit together? | **Lite spec**, one page per area           | No — it cites rules |
+| How does it look?                | **Lite spec**, or a design guide it links to | No |
+| Fine detail another team owns    | Visual specs, API specs, design guides     | No — design notes point at them |
+
+**Lite specs are encouraged.** A lite spec is a one-page overview of one area, beside the
+ledger: what the area is for, how its parts fit, the reasoning that spans several rules, and the
+mechanism worth more than a line. It explains and decides nothing. Every decision it mentions
+cites the rule that holds it, and a decision with no rule ID is a missing rule.
+
+**UI and visual design go in the lite spec, not the ledger.** Layout, spacing, colour, type and
+component choice are not logic, and a rule about them would be tested by eye, not by code. What
+the user relies on stays a rule: that an error is shown, when a button is disabled, the wording
+when the wording is a decision. The test is simple: if the product would *behave* differently,
+it is a rule; if it would only *look* different, it belongs in the lite spec.
+
+So the ledger stays short and strict, and the documents around it stay readable. The ledger
+holds the decisions. Everything else explains them.
+
+## Where it came from
 
 This skill grew out of rebuilding a real production app on a new stack. The ledger became the
 acceptance list for the rebuild: each piece of work cited its rules, named its tests by ID, and
@@ -130,7 +189,7 @@ Talk to Claude normally; the skill triggers on what you are doing.
 | "Fresh eyes" / "review the ledger"                            | Looks for rot: stale sources, undefined terms, rules over two sentences, specs that contradict rules. |
 | "What's left?" / "which rules are enforced?"                  | Runs the checker and reports settled rules below `passing`, grouped by intent, and the gaps.  |
 | "Write a spec for…"                                           | Writes a lite spec that cites a rule for every decision, capturing missing rules first.       |
-| An area grows past about eight rules                          | Offers a lite spec, so the flow and mechanism move out and each rule stays short.             |
+| An area grows past about eight rules                          | Offers a lite spec, so the flow, mechanism and look and feel move out and each rule stays short. |
 | "Read me the rules"                                           | Produces a listening script: each intent, then the rules that serve it.                       |
 
 ## The checker
