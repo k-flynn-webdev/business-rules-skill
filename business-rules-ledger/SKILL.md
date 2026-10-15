@@ -306,6 +306,13 @@ rules short, because explanation has somewhere else to go (br-M33).
 | Open questions                                     | Reasoning that spans rules ("these three only work together") |
 | A one-line source: date, citation, the reason      | Mechanism longer than a line; the rule's design note points here |
 | `gap:` and `suspect:`                              | A narrative of how the area got here                       |
+|                                                    | Look and feel: layout, styling, components, the design guide |
+
+UI and visual design are not rules. How a screen looks — layout, spacing, colour, type,
+component choice — goes in the area's lite spec, or in a design guide the lite spec points at.
+What the user can rely on stays a rule: that an error is shown, what it says when the wording is
+a decision, when a button is disabled. Ask whether the product would behave differently, not
+only look different; if only the look changes, it belongs in the lite spec.
 
 **Offer one** when an area passes about eight rules, when a design note or source grows past a
 few lines, when the same explanation appears under two rules, or when the user asks for a spec.

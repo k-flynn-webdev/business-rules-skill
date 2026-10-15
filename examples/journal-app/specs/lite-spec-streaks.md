@@ -25,7 +25,7 @@ what stops the app punishing someone at 9am for not having written yet.
 | Stored streaks (future) | A cached copy for fast reads                         | br-B16 |
 
 Start with `src/streaks.ts` and its tests in `src/streaks.test.ts`. Every test is named after a
-test ID in the ledger, so `grep -r "br-B07"` shows the rule, its code and its tests together.
+test ID in the ledger, so `git grep -n "br-B07"` shows the rule, its code and its tests together.
 
 ## Storage (design detail for br-B16)
 
