@@ -152,7 +152,7 @@ Built by `scripts/ledger-check.ts --write` from the rule entries below. Do not e
 
 ## Citing rules in code
 
-The ID is the link. `grep -r "br-[X][NN]"` returns the rule, its tests, and the code that enforces it.
+The ID is the link. `git grep -n "br-[X][NN]"` returns the rule, its tests, and the code that enforces it.
 `scripts/ledger-check.ts` reads the same citations to compute enforcement.
 
 A citation is the ID followed by a colon (`br-B07:`) or after `@see`. Mentioning a rule anywhere

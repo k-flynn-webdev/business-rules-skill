@@ -42,7 +42,7 @@ that mentions the decision cites its ID instead of restating it.
 
 Consolidating decisions this way buys four things:
 
-- **One place to look.** `grep -r "br-B02"` returns the rule, the code that enforces it and the
+- **One place to look.** `git grep -n "br-B02"` returns the rule, the code that enforces it and the
   tests that prove it. You, a reviewer and an agent all read the same answer.
 - **One place to change.** Amend the rule, and every document that cites it is still right. A
   decision that is copied into a spec and a ticket is three edits, and someone forgets one.
@@ -149,7 +149,8 @@ if (text.length > MAX_CHARS) return { ok: false, error: `Keep it to ${MAX_CHARS}
 it("br-B02.7 100 emoji, 200 characters, are allowed", () => { … });
 ```
 
-`grep -r "br-B02"` returns the rule, the code and the tests together. The checker reads the same
+`git grep -n "br-B02"` returns the rule, the code and the tests together. It searches only
+files git tracks, so `node_modules` and test-result files stay out of the answer. The checker reads the same
 IDs and writes each rule's enforcement into the ledger's index:
 
 | Enforcement | Meaning                                                    |

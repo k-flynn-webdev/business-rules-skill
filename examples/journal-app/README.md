@@ -100,7 +100,7 @@ Take br-B02, track length:
 4. **The checker** finds the citation and the eight named tests, reads the test results, and
    writes `passing` into the index.
 
-`grep -r "br-B02"` now returns the rule, the code and every test, in one search.
+`git grep -n "br-B02"` now returns the rule, the code and every test, in one search.
 
 ## Specs alongside the ledger
 
