@@ -70,6 +70,7 @@ kind of thing has its own home, and only one of them decides:
 | How does this area fit together? | **Lite spec**, one page per area           | No — it cites rules |
 | How does it look?                | **Lite spec**, or a design guide it links to | No |
 | Fine detail another team owns    | Visual specs, API specs, design guides     | No — design notes point at them |
+| What work is planned?            | **Tickets**, in your tracker               | No — they cite rules |
 
 **Lite specs are encouraged.** A lite spec is a one-page overview of one area, beside the
 ledger: what the area is for, how its parts fit, the reasoning that spans several rules, and the
@@ -84,6 +85,25 @@ it is a rule; if it would only *look* different, it belongs in the lite spec.
 
 So the ledger stays short and strict, and the documents around it stay readable. The ledger
 holds the decisions. Everything else explains them.
+
+## Tickets in the decision loop
+
+Tickets are where most decisions start. Someone works a ticket, hits a question the ticket does
+not answer, and decides it in the code. The ledger pulls that decision back into the loop:
+
+1. **The ticket raises the question.** While working it, you describe how something should
+   behave. The skill drafts the rule from your words, or records it as `open` with the question
+   written under it, so it waits for an answer instead of being guessed.
+2. **The rule cites the ticket.** Its source line names the ticket and the reason, so the "why"
+   outlives the ticket thread (`2026-08-02, TICK-118. Venues were cancelling on the Friday…`).
+3. **The ticket cites the rule.** Its acceptance criteria become rule IDs, `br-B02` and
+   `br-B05`, not a paraphrase. When a rule is amended, the ticket is still right.
+4. **The checker closes the loop.** The ticket is done when its rules reach `passing`. A rule the
+   code does not keep yet carries a `gap:` line, which can name the ticket that will fix it.
+
+So the tracker keeps what it is good at — planning, ownership, status — and stops being a place
+where decisions get lost. A new ticket that contradicts a rule shows up as a conflict to settle,
+not as a quiet change in behaviour.
 
 ## Where it came from
 
