@@ -59,18 +59,20 @@ keeps reporting whether the code still agrees**.
 
 Consolidating decisions does not mean putting everything in the ledger. A ledger that also holds
 explanation, mechanism and design becomes the long prose spec it was meant to replace. So each
-kind of thing has its own home, and only one of them decides:
+kind of thing has its own home. Only rules decide; the rest point at them.
 
-| Question                         | Lives in                                                      | Decides?                        |
-| -------------------------------- | ------------------------------------------------------------- | ------------------------------- |
-| Why does this exist?             | **Intents**, at the top of the ledger                         | No — rules serve them           |
-| What must the product do?        | **Rules**, in the ledger                                      | **Yes**                         |
-| Is it true yet?                  | **Enforcement**, computed by the checker                      | No — it measures                |
-| How is it built?                 | **Design notes** under the rule, or the lite spec when longer | No                              |
-| How does this area fit together? | **Lite spec**, one page per area                              | No — it cites rules             |
-| How does it look?                | **Lite spec**, or a design guide it links to                  | No                              |
-| Fine detail another team owns    | Visual specs, API specs, design guides                        | No — design notes point at them |
-| What work is planned?            | **Tickets**, in your tracker                                  | No — they cite rules            |
+| Question                         | Lives in                                                      | How it relates to the rules             |
+| -------------------------------- | ------------------------------------------------------------- | --------------------------------------- |
+| Why does this exist?             | **Intents**, at the top of the ledger                         | Each rule serves one                    |
+| What must the product do?        | **Rules**, in the ledger                                      | **They are the decisions**              |
+| Is it true yet?                  | **Enforcement**, computed by the checker                      | Checks each rule against the code       |
+| How is it built?                 | **Design notes** under the rule, or the lite spec when longer | Explain how a rule is built             |
+| How does this area fit together? | **Lite spec**, one page per area                              | Explains rules together, and cites them |
+| How does it look?                | **Lite spec**, or a design guide it links to                  | Sits beside the rules, never in them    |
+| Fine detail another team owns    | Visual specs, API specs, design guides                        | Design notes point at them              |
+| What work is planned?            | **Tickets**, in your tracker                                  | Raise new rules, and cite existing ones |
+
+When anything disagrees with a rule, the rule wins and the other document is fixed.
 
 **Lite specs are encouraged.** A lite spec is a one-page overview of one area, beside the
 ledger: what the area is for, how its parts fit, the reasoning that spans several rules, and the
