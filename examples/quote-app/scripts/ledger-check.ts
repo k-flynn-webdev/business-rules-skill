@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 /**
  * Checks a business rules ledger against the codebase, lints it, and computes each rule's enforcement.
- * Version 2.7.1 — ships with the business-rules-ledger skill. Reinstall from the skill to update.
+ * Version 2.7.2 — ships with the business-rules-ledger skill. Reinstall from the skill to update.
  *
  * Usage:
  *   npx tsx scripts/ledger-check.ts                         report only
@@ -14,6 +14,8 @@
  *   npx tsx scripts/ledger-check.ts --waiting               list everything waiting on the owner, not only the oldest 10
  *   npx tsx scripts/ledger-check.ts --tag                   list every tag with how many rules and intents carry it
  *   npx tsx scripts/ledger-check.ts --tag=boilerplate       list the rules and intents carrying that tag
+ *   npx tsx scripts/ledger-check.ts --rule=br-B02           one rule: its entry, enforcement, citations and tests
+ *                                                            (--rule br-B02 and --rule B02 work too)
  *   npx tsx scripts/ledger-check.ts [ledger] --root=.       ledger defaults to specs/BUSINESS-RULES.md
  *
  * Without --results, a rule already marked passing stays passing while its tests still exist.
@@ -97,9 +99,12 @@ const flag = (name: string) => {
   const a = args.find((x) => x.startsWith(`--${name}=`));
   return a ? a.slice(name.length + 3) : undefined;
 };
+// --rule also takes its ID as the next argument, so `npm run rule br-B02` works.
+const ruleAt = args.indexOf("--rule");
+const ruleArg = ruleAt >= 0 ? args[ruleAt + 1] : undefined;
 const ROOT = resolve(flag("root") ?? process.cwd());
 const LEDGER = resolve(
-  args.find((a) => !a.startsWith("--")) ??
+  args.find((a, i) => !a.startsWith("--") && !(ruleAt >= 0 && i === ruleAt + 1)) ??
     join(ROOT, "specs/BUSINESS-RULES.md"),
 );
 const SELF = resolve(process.argv[1] ?? "");
@@ -108,12 +113,18 @@ const REQUIRE = flag("require") as Level | undefined;
 const WRITE = args.includes("--write");
 const VERIFY = args.includes("--verify");
 const ALL_WAITING = args.includes("--waiting");
+// --rule=br-B02 (or B02) prints one rule instead of the report.
+const ONE_RULE = (flag("rule") ?? ruleArg)?.toUpperCase().replace(/^(BR-)?/, "br-");
 // How many waiting entries the report shows before "and N more".
 const WAITING_SHOWN = 10;
 // A document beside the ledger that is not a product spec (a component or style guide, say)
 // carries this marker, so the checker does not ask it to name an intent.
 const NOT_A_SPEC = /<!--\s*ledger:\s*not a spec\s*-->/i;
 
+if (ruleAt >= 0 && !ruleArg) {
+  console.error("--rule needs a rule ID: --rule br-B02");
+  process.exit(2);
+}
 if (REQUIRE && !LEVELS.includes(REQUIRE)) {
   console.error(`--require must be one of: ${LEVELS.join(", ")}`);
   process.exit(2);
@@ -336,6 +347,7 @@ function scanCode() {
   const citations = new Map<string, string[]>();
   const mentions = new Map<string, string[]>();
   const tests = new Map<string, Set<string>>();
+  const testsAt = new Map<string, string[]>();
   const unprefixed: string[] = [];
   const re = /\bbr-([A-Z]\d{2})(\.\d+)?\b/g;
   const bareRe = /(?<![\w-])([A-Z]\d{2}\.\d+)\b/g;
@@ -351,6 +363,9 @@ function scanCode() {
         if (m[2] && inString(m.index!)) {
           if (!tests.has(m[1])) tests.set(m[1], new Set());
           tests.get(m[1])!.add(`${m[1]}${m[2]}`);
+          const id = `${m[1]}${m[2]}`;
+          if (!testsAt.has(id)) testsAt.set(id, []);
+          testsAt.get(id)!.push(where);
         } else {
           const into = isCitation(text, m.index!, m[0].length)
             ? citations
@@ -364,7 +379,7 @@ function scanCode() {
       }
     });
   }
-  return { citations, mentions, tests, unprefixed };
+  return { citations, mentions, tests, testsAt, unprefixed };
 }
 
 // Test IDs in result names. Tolerates Go's subtest names, where spaces become underscores.
@@ -651,7 +666,7 @@ function main() {
     );
   }
 
-  const { citations, mentions, tests: codeTests, unprefixed } = scanCode();
+  const { citations, mentions, tests: codeTests, testsAt, unprefixed } = scanCode();
   const docCount = checkDocs(ruleIds, intentIds);
   const ledgerTests = new Set(rules.flatMap((r) => r.tests));
   for (const u of unprefixed) {
@@ -812,6 +827,34 @@ function main() {
       level = "passing";
     return r.fields.gap ? `${level}, gap` : level;
   };
+
+  if (ONE_RULE) {
+    const r = rules.find((x) => x.id === ONE_RULE);
+    if (!r) {
+      console.error(`${ONE_RULE}: no such rule in ${relative(ROOT, LEDGER)}.`);
+      process.exit(1);
+    }
+    const bare = r.id.slice(3);
+    const at = lines.findIndex((l) => new RegExp(`^## ${r.id}\\s*$`).test(l));
+    const out: string[] = [];
+    out.push(`${r.id}  ${r.fields.status ?? "no status"}, ${cellFor(r)}`);
+    out.push(r.statement);
+    out.push("");
+    out.push(`Entry:     ${relative(ROOT, LEDGER)}:${at + 1}`);
+    out.push(`Serves:    ${r.fields.serves ?? "—"}`);
+    out.push(`Tags:      ${r.tags.join(", ") || "—"}`);
+    if (r.fields.gap) out.push(`Gap:       ${r.fields.gap}`);
+    out.push("", "Cited in code:");
+    out.push(...(citations.get(bare) ?? ["(none)"]).map((w) => `  ${w}`));
+    const missing = missingTests.get(r.id) ?? [];
+    out.push("", `Tests (${r.tests.length - missing.length} of ${r.tests.length} in code):`);
+    for (const t of r.tests)
+      out.push(`  br-${t}  ${(testsAt.get(t) ?? ["missing"]).join(", ")}`);
+    const said = mentions.get(bare);
+    if (said) out.push("", "Mentioned, not cited:", ...said.map((w) => `  ${w}`));
+    console.log(out.join("\n"));
+    process.exit(0);
+  }
 
   const generated = renderIndex(
     rules.filter((r) => !r.id.startsWith("br-M")),

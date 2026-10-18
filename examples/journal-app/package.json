@@ -9,7 +9,8 @@
         "test:results": "vitest run --reporter=json --outputFile=test-results.json",
         "ledger": "npm run test:results; tsx scripts/ledger-check.ts --results=test-results.json --write",
         "ledger:verify": "npm run test:results && tsx scripts/ledger-check.ts --results=test-results.json --verify",
-        "ledger:audio": "tsx scripts/audio-ledger.ts"
+        "ledger:audio": "tsx scripts/audio-ledger.ts",
+        "rule": "tsx scripts/ledger-check.ts --rule"
     },
     "devDependencies": {
         "@types/node": "26.6.2",

@@ -1,6 +1,6 @@
 ---
 metadata:
-  version: "2.7.1"
+  version: "2.7.2"
 ---
 
 # The Business Rules Ledger

@@ -2,12 +2,12 @@
 name: "business-rules-ledger"
 description: Capture product intents, business rules and their tests in a business rules ledger — a living, grep-able source of truth that code and tests conform to, with each rule's enforcement computed from the code. Use whenever the user wants to write down a rule, decision, invariant or intent ("add a rule", "write this down", "how should this behave", "what's the rule for X"); describes what the system should or shouldn't do while working on tickets, bugs or features; asks for a spec, requirements or acceptance criteria; wants a ledger built from a codebase; or mentions a rules ledger, intents, br- IDs or rule-driven development. Also use for "grill me" or settling open rules; "intent review" or confirming observed rules; "fresh eyes" or reviewing the ledger; asking which rules are enforced, what's left, or to check the ledger against the code; and "read me the rules", "audio" or "listen". Prefer this over a prose spec.
 metadata:
-  version: "2.7.1"
+  version: "2.7.2"
 ---
 
 # Business Rules Ledger
 
-Version 2.7.1. See the changelog at the end.
+Version 2.7.2. See the changelog at the end.
 
 A ledger of intents and the numbered rules that serve them. An intent says what a user should be
 able to do and what would feel broken. A rule is one decision, stated in one or two sentences,
@@ -572,6 +572,10 @@ review mode read the tests of any `attended: required` rule against its Fails if
   not lowercase letters, digits and hyphens
 - with `--tag`, lists every tag with how many rules and intents carry it; with `--tag=name`, lists
   the rules and intents that carry it, then exits without checking anything else
+- with `--rule=br-B02` (or `--rule br-B02`, or `B02`), prints one rule instead of the report: its
+  statement, status and enforcement, the ledger line of its entry, every citation and every test
+  with file and line, and mentions that are not citations. Use it to answer "what does br-B02
+  say, and where is it enforced?" without reading the whole report
 - with `--write`, rebuilds the whole index from the rule entries: ID, statement, serves, tags,
   status (with `, attended`) and enforcement, in document order, padded the way a formatter would
 - with `--verify`, exits non-zero when the index differs from what `--write` would build
@@ -597,10 +601,11 @@ Offer to install whenever the script is missing and the user asks about enforcem
 the user says "install the checker" or "set it up so I can run it outside Claude".
 
 1. Copy `assets/ledger-check.ts` to `scripts/ledger-check.ts` in the project.
-2. If `package.json` exists, add `"ledger:check": "tsx scripts/ledger-check.ts --write"` to the
-   `scripts` block — only if `tsx` is already a dependency.
+2. If `package.json` exists, add `"ledger:check": "tsx scripts/ledger-check.ts --write"` and
+   `"rule": "tsx scripts/ledger-check.ts --rule"` to the `scripts` block — only if `tsx` is
+   already a dependency.
 3. Confirm: "Installed. Run `npx tsx scripts/ledger-check.ts --write` (or `npm run
-ledger:check`) any time to refresh the index."
+ledger:check`) any time to refresh the index, and `npm run rule br-B02` to look up one rule."
 4. Then recommend wiring it in — once, in a few lines, without doing it (see below).
 
 **Wiring it in (recommend, do not do):**
@@ -707,9 +712,9 @@ The document header states the format version. When opening a ledger with an old
 no version, say so and offer to upgrade it. Do not upgrade without asking. List the changes the
 upgrade would make before making them.
 
-Upgrading 2.x to 2.7.1 is mechanical; no rule changes:
+Upgrading 2.x to 2.7.2 is mechanical; no rule changes:
 
-1. Set `Format: business-rules-ledger 2.7.1`.
+1. Set `Format: business-rules-ledger 2.7.2`.
 2. Install `assets/business-rules-authoring.md` as `BUSINESS-RULES-AUTHORING.md` next to the ledger.
 3. Replace the `How to write rules (br-M)` section with the template's `How to read this ledger`
    section, and point the header line at `BUSINESS-RULES-AUTHORING.md`.
@@ -742,10 +747,14 @@ Upgrading 2.x to 2.7.1 is mechanical; no rule changes:
     oldest (`--waiting` for all) and dates observed entries from when they were read. Documents
     that name no intent come as one warning; mark any that are not product specs with
     `<!-- ledger: not a spec -->` rather than leaving the warning standing.
+12. From 2.7.1: reinstall the checker. The format is unchanged. `--rule br-B02` prints one rule
+    with its citations and tests; offer to add the `rule` script to `package.json` (see
+    _Installing the script_). Offer to move any look-and-feel detail in rules or design notes
+    into the area's lite spec.
 
-Upgrading 1.x to 2.7.1, in stages the user can stop between:
+Upgrading 1.x to 2.7.2, in stages the user can stop between:
 
-1. Set `Format: business-rules-ledger 2.7.1`. Do steps 2 to 4, 6 and 8 to 11 of the 2.x upgrade above.
+1. Set `Format: business-rules-ledger 2.7.2`. Do steps 2 to 4, 6 and 8 to 12 of the 2.x upgrade above.
 2. Add the Intents and Glossary sections. Draft intents from the existing rules and their
    sources, mark them `observed`, and confirm them with the user one at a time.
 3. Add `kind:` and `serves:` to every rule. Propose both; ask only where unclear.
@@ -810,7 +819,7 @@ Use this order exactly:
 
 Source of truth. Code and tests conform to this document.
 Written under the authoring rules in [`BUSINESS-RULES-AUTHORING.md`](BUSINESS-RULES-AUTHORING.md).
-Format: business-rules-ledger 2.7.1
+Format: business-rules-ledger 2.7.2
 
 ## Intents
 
@@ -941,6 +950,7 @@ is now true. Do not write the new one and leave both standing.
 
 ## Changelog
 
+- **2.7.2** — 2026-10-19 — UI and visual design belong in lite specs, not the ledger: if the product would behave differently it is a rule, if it would only look different it is not. _Lite specs_ gains a look-and-feel row and paragraph, and the template a _Look and feel_ section. The checker's `--rule br-B02` prints one rule: statement, status, enforcement, entry line, citations, tests with file and line, and mentions that are not citations; installing the checker adds a `rule` script to `package.json`. Docs search rule IDs with `git grep`, which skips ignored files such as test results and `node_modules`. Upgrade step 12.
 - **2.7.1** — 2026-10-12 — The 2.7.0 report, tuned on a 54-rule ledger built from code. _Waiting on the owner_ shows the 10 oldest entries with counts by kind (`--waiting` lists all), instead of 60 lines on every run. An observed entry is dated from its oldest source line, when it was read, so an amendment no longer resets its age; an open rule still dates from its newest. Ages use the local date, as ledger dates do. Documents that name no intent come as one warning, and a document that is not a product spec opts out with `<!-- ledger: not a spec -->`. Upgrade step 11. The smallest-complete-rule example (br-B20) says "less than 15 minutes" instead of "within", so its statement and Fails if agree with its test at exactly 15 minutes.
 - **2.7.0** — 2026-10-11 — Nothing waits silently. The checker lists what is waiting on the owner (observed intents, observed and open rules) oldest first, with the date of each entry's latest source line and its open-question count, and counts intents by status in the summary. It checks the other Markdown beside the ledger: an ID that names nothing is a warning, and so is a document that names no intent (br-M30). An observed rule's source starts with the date it was read. _Open rules_ says what to do on opening a ledger: run the checker, offer one next step, name contradicting documents, and recommend wiring the checker in if nothing runs it. No ledger change needed; reinstall the checker.
 - **2.6.0** — 2026-10-09 — Easier rule creation, shorter rules. New _The smallest complete rule_ and _Which tests to write_ under _Capturing a rule_: a test earns its ID only when it can fail for its own reason (new br-M32). Lite specs are defined (new br-M33, new asset `assets/lite-spec-template.md`): one page per area, holding the flow, cross-rule reasoning and mechanism, so rules keep only what decides. New _Batch answers_: grill, intent review and review can take numbered answers in one message. _Building a ledger from a codebase_ now agrees scope first and applies the notice check while capturing. br-M10 amended: an observed rule may carry open questions. br-M19 amended: attended is proposed in intent review, not while building from code. br-M28 amended: an observed rule has no gap; a concern is a `suspect:` note. Review mode checks duplicate tests and gaps that are not gaps. The checker warns about an observed rule with a gap and about attended on more than a third of rules. Upgrade step 9. Lessons from building a 54-rule ledger from a template app.
