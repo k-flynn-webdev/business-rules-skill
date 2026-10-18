@@ -7,6 +7,18 @@ verifies.
 > A spec tells you what someone once intended. A ledger tells you which of those intentions the
 > code is currently keeping.
 
+## Quick start
+
+1. **Install.** Copy the `business-rules-ledger` folder into `~/.claude/skills/` for Claude Code,
+   or upload the zip in Claude's settings. See [Install](#install).
+2. **Write a decision down.** In your project, tell Claude: _"Write this down: blank entries
+   should be rejected."_ It drafts the rule and, if there is no ledger yet, offers to start one.
+3. **See what the code keeps.** Ask _"what's left?"_. Claude offers to install the checker, then
+   reports which rules the code enforces and which it does not yet.
+4. **Look up one rule.** `npx tsx scripts/ledger-check.ts --rule br-B02`.
+
+Then keep the five [day-to-day habits](#day-to-day). The rest of this page explains why it works.
+
 ---
 
 ## The situation
@@ -55,6 +67,105 @@ Consolidating decisions this way buys four things:
 
 A ledger is the notes file with two things added: **an ID per decision**, and **a checker that
 keeps reporting whether the code still agrees**.
+
+## What a rule looks like
+
+```markdown
+## br-B02
+
+kind: invariant | serves: in-01 | given: br-B21 | status: settled
+
+Track text is between 2 and 200 characters, counted after trimming.
+
+`#track` `#validation`
+
+**Examples**
+
+| Test  | Text, after trimming | Characters | Result   |
+| ----- | -------------------- | ---------- | -------- |
+| B02.1 | `x`                  | 1          | rejected |
+| B02.2 | `xx`                 | 2          | allowed  |
+| B02.6 | 201 × `x`            | 201        | rejected |
+| B02.7 | 100 × 👋             | 200        | allowed  |
+
+> Fails if a track under 2 or over 200 characters is stored, or one from 2 to 200 is refused.
+
+**Source**
+
+- 2026-09-24, review. Characters are UTF-16 code units, as the browser counts them, so the
+  counter and the server agree.
+```
+
+The code cites the rule where it enforces it, and each test is named after a test ID:
+
+```ts
+// br-B02: characters are UTF-16 code units, as the browser counts them.
+if (text.length > MAX_CHARS) return { ok: false, error: `Keep it to ${MAX_CHARS} characters.` };
+
+it("br-B02.7 100 emoji, 200 characters, are allowed", () => { … });
+```
+
+`git grep -nw "br-B02"` returns the rule, the code and the tests together. The checker reads the same
+IDs and writes each rule's enforcement into the ledger's index:
+
+| Enforcement | Meaning                                                 |
+| ----------- | ------------------------------------------------------- |
+| `none`      | Written down. No code cites it.                         |
+| `cited`     | Code cites it, but not every test in the ledger exists. |
+| `tested`    | Every test in the ledger has a test named after it.     |
+| `passing`   | Those tests ran and passed in the results you gave it.  |
+
+### Reading the IDs
+
+| ID       | What it is                                                                                   |
+| -------- | -------------------------------------------------------------------------------------------- |
+| `in-01`  | An intent: what a user should be able to do. Every rule serves one.                          |
+| `br-B02` | A rule. The letter is its area: **B** business, **U** interface, **A** API, **D** data. Add letters as you need them. |
+| `B02.1`  | A test of br-B02, as the ledger lists it. In code the test is named `br-B02.1`.              |
+| `br-M22` | An authoring rule: how to write rules. These live in `BUSINESS-RULES-AUTHORING.md`, not in your code. |
+
+### Searching by ID
+
+The quickest way to see one rule is the checker:
+
+```
+$ npx tsx scripts/ledger-check.ts --rule br-B02
+br-B02  settled, passing
+Track text is between 2 and 200 characters, counted after trimming.
+
+Entry:     specs/BUSINESS-RULES.md:232
+Serves:    in-01
+Tags:      track, validation
+
+Cited in code:
+  src/tracks.test.ts:10
+  src/tracks.ts:24
+  src/tracks.ts:30
+
+Tests (8 of 8 in code):
+  br-B02.1  src/tracks.test.ts:12
+  br-B02.2  src/tracks.test.ts:13
+  …
+```
+
+With `"rule": "tsx scripts/ledger-check.ts --rule"` in `package.json`, that is `npm run rule
+br-B02`. The skill adds the script when it installs the checker.
+
+Without the checker, `git grep` finds the same things. Each place an ID appears has its own
+shape, so you can search for one kind at a time:
+
+| You want                              | Shape                      | Command                                                        |
+| ------------------------------------- | -------------------------- | -------------------------------------------------------------- |
+| Everything about the rule             | `br-B02` anywhere          | `git grep -nw "br-B02"`                                        |
+| Just the rule, in one line            | its row in the index       | `git grep -h "^\| br-B02 \|"`                                  |
+| The code that enforces it (citations) | `br-B02:` or `@see br-B02` | `git grep -nE "br-B02:\|@see +br-B02([^.0-9]\|$)" -- ':!*.md'` |
+| Its tests                             | `br-B02.1`, `br-B02.2`, …  | `git grep -nE "br-B02\.[0-9]+" -- ':!*.md'`                    |
+
+`git grep` searches only files git tracks, so `node_modules` and test-result files stay out of
+the answer. `-w` stops `br-B02` matching `br-B020`. `-- ':!*.md'` leaves out the ledger and other
+documents, so the last two return only code. Only `br-B02:` and `@see br-B02` count as citations;
+any other mention does not count as enforcement. To print a rule's whole entry from the ledger,
+see [Advanced searches](#advanced-searches).
 
 ## Where everything else lives
 
@@ -106,78 +217,25 @@ So the tracker keeps what it is good at — planning, ownership, status — and 
 where decisions get lost. A new ticket that contradicts a rule shows up as a conflict to settle,
 not as a quiet change in behaviour.
 
+## Day to day
+
+Five habits. Most are one line.
+
+- **Before you change something,** read the rules it touches: `npm run rule br-B02`, or ask
+  Claude _"what are the rules for tracks?"_.
+- **In code,** cite the rule where you enforce it: `// br-B02: …` or `@see br-B02`.
+- **In tests,** name each test after its test ID: `it("br-B02.1 1 character is rejected", …)`.
+- **When the ledger does not answer,** do not guess. Say _"write this down"_, or leave the rule
+  `open` with the question under it.
+- **Before the PR,** run the checker. In CI, run the tests with a results file, then
+  `ledger-check.ts --results=… --verify --require=tested`.
+
 ## Where it came from
 
 This skill grew out of rebuilding a real production app on a new stack. The ledger became the
 acceptance list for the rebuild: each piece of work cited its rules, named its tests by ID, and
 the checker said what was left. When the ledger did not answer a question, the build stopped and
 asked, and the answer became a rule instead of a guess.
-
-## What a rule looks like
-
-```markdown
-## br-B02
-
-kind: invariant | serves: in-01 | given: br-B21 | status: settled
-
-Track text is between 2 and 200 characters, counted after trimming.
-
-`#track` `#validation`
-
-**Examples**
-
-| Test  | Text, after trimming | Characters | Result   |
-| ----- | -------------------- | ---------- | -------- |
-| B02.1 | `x`                  | 1          | rejected |
-| B02.2 | `xx`                 | 2          | allowed  |
-| B02.6 | 201 × `x`            | 201        | rejected |
-| B02.7 | 100 × 👋             | 200        | allowed  |
-
-> Fails if a track under 2 or over 200 characters is stored, or one from 2 to 200 is refused.
-
-**Source**
-
-- 2026-09-24, review. Characters are UTF-16 code units, as the browser counts them, so the
-  counter and the server agree.
-```
-
-The code cites the rule where it enforces it, and each test is named after a test ID:
-
-```ts
-// br-B02: characters are UTF-16 code units, as the browser counts them.
-if (text.length > MAX_CHARS) return { ok: false, error: `Keep it to ${MAX_CHARS} characters.` };
-
-it("br-B02.7 100 emoji, 200 characters, are allowed", () => { … });
-```
-
-`git grep -nw "br-B02"` returns the rule, the code and the tests together. It searches only
-files git tracks, so `node_modules` and test-result files stay out of the answer. The checker reads the same
-IDs and writes each rule's enforcement into the ledger's index:
-
-| Enforcement | Meaning                                                 |
-| ----------- | ------------------------------------------------------- |
-| `none`      | Written down. No code cites it.                         |
-| `cited`     | Code cites it, but not every test in the ledger exists. |
-| `tested`    | Every test in the ledger has a test named after it.     |
-| `passing`   | Those tests ran and passed in the results you gave it.  |
-
-### Searching by ID
-
-Each place an ID appears has its own shape, so you can search for one kind at a time:
-
-| You want                              | Shape                      | Command                                                        |
-| ------------------------------------- | -------------------------- | -------------------------------------------------------------- |
-| Everything about the rule             | `br-B02` anywhere          | `git grep -nw "br-B02"`                                        |
-| Just the rule, in one line            | its row in the index       | `git grep -h "^\| br-B02 \|"`                                  |
-| The code that enforces it (citations) | `br-B02:` or `@see br-B02` | `git grep -nE "br-B02:\|@see +br-B02([^.0-9]\|$)" -- ':!*.md'` |
-| Its tests                             | `br-B02.1`, `br-B02.2`, …  | `git grep -nE "br-B02\.[0-9]+" -- ':!*.md'`                    |
-
-The index row gives the statement, intent, tags, status and enforcement together. To print the
-whole entry, see [Advanced searches](#advanced-searches).
-
-`-w` stops `br-B02` matching `br-B020`. `-- ':!*.md'` leaves out the ledger and other documents,
-so the last two return only code. The citation shape is the same one the checker counts: an ID
-with no colon and no `@see` is a mention, not a citation, and does not count as enforcement.
 
 ## What's in this repo
 
@@ -203,7 +261,7 @@ scripts/check.sh              one version everywhere; each example's copies matc
 Build the zip, or download it from the repo's releases when there is one:
 
 ```sh
-./scripts/package.sh        # → dist/business-rules-ledger-2.7.1.zip
+./scripts/package.sh        # → dist/business-rules-ledger-2.7.2.zip
 ```
 
 - **Claude apps (claude.ai, Desktop):** upload the zip as a custom skill in Claude's settings,
@@ -241,6 +299,7 @@ npx tsx scripts/ledger-check.ts --results=results.json  # test results decide "p
 npx tsx scripts/ledger-check.ts --verify                # exit 1 if the index is stale
 npx tsx scripts/ledger-check.ts --require=tested        # exit 1 if a settled rule has no tests
 npx tsx scripts/ledger-check.ts --tag=privacy           # list the rules carrying a tag
+npx tsx scripts/ledger-check.ts --rule br-B02           # one rule: entry, citations, tests
 npx tsx scripts/ledger-check.ts --waiting               # list everything waiting on the owner, not only the oldest 10
 ```
 
@@ -264,23 +323,9 @@ tests, a gap the first checker run found, and an old spec beside the ledger that
 
 ## Versions
 
-The skill is at **2.7.1**. Every ledger states its format (`Format: business-rules-ledger 2.7.1`),
-and the skill offers to upgrade an older ledger, listing the changes first. The changelog is at
-the end of [`SKILL.md`](business-rules-ledger/SKILL.md).
-
-2.7.1 keeps that report short on a large ledger: the oldest 10 waiting entries, ages from when an
-entry was read, and one warning for every document that names no intent.
-
-2.7.0 makes sure nothing waits silently: the checker lists what is waiting on the owner, oldest
-first, and checks the other documents beside the ledger for IDs that name nothing.
-
-2.6.0 makes rules quicker to write and shorter to read: a smallest-complete-rule template, a test
-only where it can fail for its own reason, lite specs to hold the flow and mechanism of an area,
-and numbered batch answers for review sessions.
-
-2.5.0 removed most of what was written twice: the index is built from the rules, a rule's short
-fields share one line, example rows are the tests, and there is no change log inside the ledger
-(git keeps it).
+The skill is at **2.7.2**. Every ledger states its format (`Format: business-rules-ledger 2.7.2`),
+and the skill offers to upgrade an older ledger, listing the changes first. What changed in each
+version is in the changelog at the end of [`SKILL.md`](business-rules-ledger/SKILL.md).
 
 ## Advanced searches
 
