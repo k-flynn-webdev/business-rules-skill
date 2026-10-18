@@ -43,7 +43,8 @@ that mentions the decision cites its ID instead of restating it.
 Consolidating decisions this way buys four things:
 
 - **One place to look.** `git grep -nw "br-B02"` returns the rule, the code that enforces it and the
-  tests that prove it. You, a reviewer and an agent all read the same answer.
+  tests that prove it, or [any one of them](#searching-by-id). You, a reviewer and an agent all
+  read the same answer.
 - **One place to change.** Amend the rule, and every document that cites it is still right. A
   decision that is copied into a spec and a ticket is three edits, and someone forgets one.
 - **A clear winner.** When a spec, a ticket or the code disagrees with the ledger, the ledger
