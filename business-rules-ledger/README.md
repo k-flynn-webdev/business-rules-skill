@@ -1,6 +1,6 @@
 ---
 metadata:
-  version: "2.7.1"
+  version: "2.7.2"
 ---
 
 # The Business Rules Ledger
@@ -24,7 +24,8 @@ That doesn't mean specs have no place. A spec still works well as the readable o
 feature — how the parts fit, what to look at first — as long as it names the intents it serves
 and cites the rule for every decision it mentions. The spec explains; the rules decide.
 The skill's short form of this is a **lite spec**: one page per area, beside the ledger, that holds
-the flow and the mechanism so each rule can stay a few lines long.
+the flow, the mechanism and the look and feel (layout, styling, the design guide), so each rule
+can stay a few lines long and the ledger holds only logic.
 
 ## Why not just tests?
 
