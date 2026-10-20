@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 /**
  * Generates a listening-friendly script from the business rules ledger: each intent, then the rules that serve it.
- * Version 2.7.2 — ships with the business-rules-ledger skill. Reinstall from the skill to update.
+ * Version 2.8.0 — ships with the business-rules-ledger skill. Reinstall from the skill to update.
  *
  * Usage:
  *   npx tsx scripts/audio-ledger.ts              — print to stdout
@@ -11,7 +11,7 @@
  */
 
 import { readFileSync, writeFileSync, mkdtempSync } from "fs";
-import { join } from "path";
+import { join, dirname, resolve } from "path";
 import { execSync } from "child_process";
 import { tmpdir } from "os";
 
@@ -249,8 +249,39 @@ function buildScript(rules: Rule[], intents: Intent[]): string {
   return out.join("\n");
 }
 
+// The master's registry may give an area its own file: | Letter | Area | File | Owner |.
+// Those files hold that area's rules, so the script reads them after the master.
+function withAreaFiles(master: string): string {
+  const lines = master.split("\n");
+  const start = lines.findIndex((l) => /^## Registry\s*$/.test(l));
+  if (start < 0) return master;
+  const files: string[] = [];
+  let header: string[] = [];
+  for (let i = start + 1; i < lines.length && !/^## /.test(lines[i]); i++) {
+    const row = lines[i].trim();
+    if (!row.startsWith("|") || /^\|\s*-/.test(row)) continue;
+    const cells = row.replace(/^\||\|$/g, "").split("|").map((c) => c.trim());
+    if (!header.length) {
+      header = cells.map((c) => c.toLowerCase());
+      continue;
+    }
+    const letter = cells[header.indexOf("letter")] ?? "";
+    const name = cells[header.indexOf("area")] ?? "";
+    if (/^[A-Z]$/.test(letter) && name && !AREA_NAMES[letter]) AREA_NAMES[letter] = name;
+    const file = (cells[header.indexOf("file")] ?? "")
+      .replace(/^\[[^\]]*\]\(([^)]*)\)$/, "$1")
+      .replace(/`/g, "")
+      .trim();
+    // M names the authoring file, which holds no ledger rules.
+    const path =
+      file && letter !== "M" && !/^[—–-]$/.test(file) ? resolve(dirname(LEDGER), file) : "";
+    if (path && !files.includes(path)) files.push(path);
+  }
+  return [master, ...files.map((f) => readFileSync(f, "utf8"))].join("\n");
+}
+
 function main() {
-  const { rules, intents } = parse(readFileSync(LEDGER, "utf8"));
+  const { rules, intents } = parse(withAreaFiles(readFileSync(LEDGER, "utf8")));
   const script = buildScript(rules, intents);
 
   if (OUT) {

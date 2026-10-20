@@ -1,15 +1,81 @@
-# Ledger authoring rules (br-M)
+# Business rules ledger — reading, citing and authoring
 
-The rules for writing and amending the business rules ledger in this folder.
-Format: business-rules-ledger 2.7.2
+How to read the business rules ledger in this folder, cite it in code, and write or amend it.
+Format: business-rules-ledger 2.8.0
 
-Read these before adding or changing any rule, intent or glossary entry. To read the ledger, the
-_How to read this ledger_ section in the ledger itself is enough.
+Everything a ledger has in common lives here, so the ledger itself holds only its own intents,
+rules and index. Read _How to read the ledger_ to read it, _Citing rules in code_ to cite it, and
+the authoring rules before adding or changing any rule, intent or glossary entry.
 
 These rules ship with the business-rules-ledger skill. Reinstall from the skill to update; do not
 edit them per project.
 
 ---
+
+## How to read the ledger
+
+- A rule's ID is `br-` + area letter + two digits: `br-B03`. IDs are never reused. Its tests are `B03.1`, `B03.2` here, and `br-B03.1` in code.
+- An intent (`in-01`) is a user outcome. A rule's `serves:` names the intents it protects. `given:` names the rules it assumes are true.
+- Status: `observed` (read from code, not confirmed), `open` (questions unanswered), `settled` (decided), `retired` (no longer applies, kept for history). Only settled rules are decisions.
+- A rule's tests are the rows of its examples table, by the ID in the first column, and the numbered lines under **Tests**.
+- `> Fails if` is the condition that proves a rule broken. `gap:` records where the code does not conform yet.
+- The index is built from the rule entries by `scripts/ledger-check.ts`, which also computes enforcement. Never edit it by hand.
+- A large ledger keeps some areas in area files. The registry in the ledger names each area's file and owner; the index in the ledger lists every rule, wherever it lives.
+- A rule's history is in its **Source** lines. The ledger keeps no change log; git does.
+- Specs and other documents may describe an area, but decisions live in the ledger. When they disagree with the ledger, the ledger wins.
+- Before adding or changing a rule, read the authoring rules (br-M) below.
+
+---
+
+## Citing rules in code
+
+The ID is the link. `git grep -nw "br-[X][NN]"` (or `ledger-check.ts --rule br-[X][NN]`) returns the rule, its tests, and the code that enforces it.
+`scripts/ledger-check.ts` reads the same citations to compute enforcement.
+
+A citation is the ID followed by a colon (`br-B07:`) or after `@see`. Mentioning a rule anywhere
+else, such as "(br-B07)" in an explanation, does not count as enforcement.
+
+```js
+/**
+ * [What the function does.]
+ * @see br-[X][NN] [The rule, in one line.]
+ */
+function doTheThing(...) { ... }
+```
+
+```js
+// br-[X][NN]: [why this branch exists]
+if (condition) throw new SomeError();
+```
+
+```js
+test("br-[X][NN].1 [the test, in domain terms]", () => {
+  // Given [starting state]
+  // When [event]
+  // Then [outcome]
+});
+```
+
+```csharp
+[Fact(DisplayName = "br-[X][NN].1 [the test, in domain terms]")]  // NUnit: TestCase(TestName = …); MSTest: TestMethod("…")
+public void TheTest() { /* Given, When, Then */ }
+```
+
+Put the test ID in the test's display name, not the method name. Run .NET tests with
+`dotnet test --logger trx` and pass the TestResults folder to the checker's `--results=`.
+
+| Enforcement | Meaning                                                                                 |
+| ----------- | --------------------------------------------------------------------------------------- |
+| none        | No code cites the rule.                                                                 |
+| cited       | Code cites the rule, but not every ledger test has a named test in code.                |
+| tested      | Every ledger test has a test named after it in code.                                    |
+| passing     | Those tests all passed in the supplied results. This does not prove they test the rule. |
+
+`, gap` means the rule has a known divergence recorded in its `gap:` line.
+
+---
+
+## Authoring rules
 
 - **br-M01** — Record one decision per rule. Split the rule where the parts can be falsified separately. A part that fails for its own reason is its own rule.
 - **br-M02** — Use the terms the domain uses. Use a technical term when it is the correct name for the thing.

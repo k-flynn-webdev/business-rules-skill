@@ -1,6 +1,6 @@
 ---
 metadata:
-  version: "2.7.2"
+  version: "2.8.0"
 ---
 
 # The Business Rules Ledger
@@ -137,6 +137,8 @@ own sake.
    only a statement, a kind, the intent it serves, tags, a few tests, a Fails if line and a source.
 4. When an area grows past about eight rules, add a lite spec from `assets/lite-spec-template.md`.
 5. Install the checker and run it. Add it to CI once you have enough rules to care.
+6. Past about 100 rules, move areas into area files: the master keeps the intents, glossary and
+   the index of every rule, and each area file holds one area's rules.
 
 The full reference — authoring rules, the modes for grilling open rules and reviewing a ledger,
 the checker's options, and test naming for each stack — is in `SKILL.md`.
