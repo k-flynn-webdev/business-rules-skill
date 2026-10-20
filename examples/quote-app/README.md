@@ -14,14 +14,23 @@ start here.
 quote-app/
 ├── data/QUOTES.md                    ← the quotes; the owner edits this file
 ├── specs/
-│   ├── BUSINESS-RULES.md             ← the ledger
-│   ├── BUSINESS-RULES-AUTHORING.md   ← how to write rules (br-M), installed from the skill
+│   ├── BUSINESS-RULES.md             ← the master: intents, glossary, index of every rule, registry,
+│   │                                    and the Data and API rules
+│   ├── rules/business.md             ← area B: the Business rules
+│   ├── rules/interface.md            ← area U: the Interface rules
+│   ├── BUSINESS-RULES-AUTHORING.md   ← how to read, cite and write rules, installed from the skill
 │   └── ARCHITECTURE.md               ← a spec from before the ledger. Left in on purpose.
 ├── src/
 │   ├── quotes.ts, cache.ts           ← code that cites rules
 │   └── *.test.ts                     ← tests named after test IDs
 └── scripts/                          ← the checker and the audio script
 ```
+
+The ledger is split into area files, to show how a large product keeps its ledger readable. The
+registry in the master gives Business and Interface their own files and owners; Data and API stay
+in the master. The index in the master still lists all 16 rules, and the checker reads every file.
+A change to the home page reads the master and `rules/interface.md`, about 3.8k tokens, instead of
+the whole 6.4k-token ledger it was before the split. See _Area files_ in the skill.
 
 ## Run it
 
@@ -37,6 +46,7 @@ npm run ledger:audio     # a listening script of the intents and rules
 `npm run ledger` prints:
 
 ```
+Ledger: specs/BUSINESS-RULES.md and 2 area files: specs/rules/business.md, specs/rules/interface.md
 Rules: 16 active (0 observed, 0 open, 16 settled), 0 retired. Intents: 6 (5 observed, 1 settled).
 Settled enforcement: 8 none, 2 cited, 0 tested, 6 passing.
 Other documents beside the ledger: 1 checked for rule and intent IDs.

@@ -11,7 +11,7 @@ connect, and that fits in a few small files.
 journal-app/
 ├── specs/
 │   ├── BUSINESS-RULES.md              ← the ledger: intents, glossary, index, rules
-│   ├── BUSINESS-RULES-AUTHORING.md    ← how to write rules (br-M), installed from the skill
+│   ├── BUSINESS-RULES-AUTHORING.md    ← how to read, cite and write rules, installed from the skill
 │   ├── lite-spec-streaks.md           ← a readable overview that decides nothing
 │   └── lite-spec-anniversary-card.md
 ├── src/

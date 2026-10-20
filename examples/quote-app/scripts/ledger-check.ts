@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 /**
  * Checks a business rules ledger against the codebase, lints it, and computes each rule's enforcement.
- * Version 2.7.2 — ships with the business-rules-ledger skill. Reinstall from the skill to update.
+ * Version 2.8.0 — ships with the business-rules-ledger skill. Reinstall from the skill to update.
  *
  * Usage:
  *   npx tsx scripts/ledger-check.ts                         report only
@@ -17,6 +17,9 @@
  *   npx tsx scripts/ledger-check.ts --rule=br-B02           one rule: its entry, enforcement, citations and tests
  *                                                            (--rule br-B02 and --rule B02 work too)
  *   npx tsx scripts/ledger-check.ts [ledger] --root=.       ledger defaults to specs/BUSINESS-RULES.md
+ *
+ * The ledger is the master. When its registry names a file for an area, that area's rules live in
+ * that file (an area file) and the checker reads it too. The one index stays in the master.
  *
  * Without --results, a rule already marked passing stays passing while its tests still exist.
  */
@@ -132,6 +135,9 @@ if (REQUIRE && !LEVELS.includes(REQUIRE)) {
 
 interface Rule {
   id: string;
+  // Where the entry is: the master or an area file, and the line of its heading.
+  file: string;
+  line: number;
   fields: Record<string, string>;
   statement: string;
   tests: string[];
@@ -175,7 +181,7 @@ const SOURCE_DATE = /^-\s+(\d{4}-\d{2}-\d{2})\b/;
 const newer = (a: string, b: string) => (b > a ? b : a);
 const older = (a: string, b: string) => (!a || b < a ? b : a);
 
-function parseLedger(content: string) {
+function parseLedger(content: string, file: string) {
   const rules: Rule[] = [];
   const intents: Intent[] = [];
   let rule: Rule | null = null;
@@ -194,7 +200,11 @@ function parseLedger(content: string) {
     inQuestions = false;
   };
 
-  for (const raw of content.split("\n")) {
+  content.split("\n").forEach((raw, at) => step(raw, at + 1));
+  close();
+  return { rules, intents };
+
+  function step(raw: string, lineNo: number) {
     const line = raw.trim();
     const ruleHead = raw.match(/^## (br-[A-Z]\d{2})\s*$/);
     const intentHead = raw.match(/^#{2,3} (in-\d{2})\s*$/);
@@ -203,6 +213,8 @@ function parseLedger(content: string) {
       close();
       rule = {
         id: ruleHead[1],
+        file,
+        line: lineNo,
         fields: {},
         statement: "",
         tests: [],
@@ -213,16 +225,16 @@ function parseLedger(content: string) {
         firstSource: "",
         lastSource: "",
       };
-      continue;
+      return;
     }
     if (intentHead) {
       close();
       intent = { id: intentHead[1], statement: "", fields: {}, tags: [], firstSource: "", lastSource: "" };
-      continue;
+      return;
     }
     if (/^#{1,3} /.test(raw)) {
       close();
-      continue;
+      return;
     }
 
     if (intent) {
@@ -230,11 +242,11 @@ function parseLedger(content: string) {
       if (date) {
         intent.firstSource = older(intent.firstSource, date[1]);
         intent.lastSource = newer(intent.lastSource, date[1]);
-        continue;
+        return;
       }
       if (TAG_LINE.test(line)) {
         intent.tags = tagsOf(line);
-        continue;
+        return;
       }
       const fs = fieldLines(line, INTENT_FIELDS);
       if (fs)
@@ -249,27 +261,27 @@ function parseLedger(content: string) {
         line !== "---"
       )
         intent.statement = line;
-      continue;
+      return;
     }
-    if (!rule) continue;
+    if (!rule) return;
     const r: Rule = rule;
 
     if (!statementDone) {
       const fs = !inStatement ? fieldLines(line, RULE_FIELDS) : null;
       if (fs) {
         for (const f of fs) r.fields[f[0]] = f[1];
-        continue;
+        return;
       }
       if (!line) {
         if (inStatement) statementDone = true;
-        continue;
+        return;
       }
       if (/^(`#|\*\*|>|-|\|)/.test(line)) {
         statementDone = true;
       } else {
         inStatement = true;
         r.statement += (r.statement ? " " : "") + line;
-        continue;
+        return;
       }
     }
 
@@ -289,8 +301,6 @@ function parseLedger(content: string) {
     const t = line.match(/^(?:-\s+|\|\s*)([A-Z]\d{2}\.\d+)\b/);
     if (t) r.tests.push(t[1]);
   }
-  close();
-  return { rules, intents };
 }
 
 function section(lines: string[], title: RegExp): [number, number] | null {
@@ -308,6 +318,45 @@ const cells = (row: string) =>
     .replace(/\|$/, "")
     .split("|")
     .map((c) => c.trim());
+
+// The registry maps each area letter to its name, and optionally to an area file and an owner:
+// | Letter | Area | File | Owner |. An area with no file keeps its rules in the master.
+interface Area {
+  letter: string;
+  name: string;
+  file: string | null;
+  owner: string;
+}
+
+function readRegistry(lines: string[]): Area[] {
+  const reg = section(lines, /^## Registry\s*$/);
+  if (!reg) return [];
+  const areas: Area[] = [];
+  let header: string[] = [];
+  for (let i = reg[0]; i < reg[1]; i++) {
+    if (!lines[i].trim().startsWith("|") || /^\|\s*-/.test(lines[i].trim())) continue;
+    const row = cells(lines[i]);
+    if (!header.length) {
+      header = row.map((h) => h.toLowerCase());
+      continue;
+    }
+    const col = (name: string) => row[header.indexOf(name)] ?? "";
+    const letter = col("letter");
+    // M names the authoring file, which holds no ledger rules.
+    if (!/^[A-Z]$/.test(letter) || letter === "M") continue;
+    // A file may be written plainly, in backticks, or as a link: [rules/billing.md](rules/billing.md).
+    const raw = col("file").replace(/^\[[^\]]*\]\(([^)]*)\)$/, "$1").replace(/`/g, "").trim();
+    const file = raw && !/^[—–-]$/.test(raw) ? resolve(dirname(LEDGER), raw) : null;
+    areas.push({ letter, name: col("area"), file, owner: col("owner") });
+  }
+  return areas;
+}
+
+// A table row compared by its cells, ignoring padding; a separator row is the same at any width.
+const rowKey = (row: string) =>
+  cells(row)
+    .map((c) => (/^:?-+:?$/.test(c) ? "---" : c))
+    .join("|");
 
 function walk(dir: string, out: string[]) {
   for (const name of readdirSync(dir)) {
@@ -577,8 +626,9 @@ function intentSummary(intents: Intent[]) {
   return by.size ? ` (${[...by].map(([s, n]) => `${n} ${s}`).join(", ")})` : "";
 }
 
-// The index, rebuilt from the rule entries in document order. Every cell comes from the rule, so
-// nothing in it is edited by hand. Padded like a formatter would, so a formatter changes nothing.
+// The index, rebuilt from the rule entries: the master's rules, then each area file's, in document
+// order. Every cell comes from the rule, so nothing in it is edited by hand. Unpadded, to keep it
+// cheap to read; a formatter may pad it, and the checker compares cells, not spacing.
 function renderIndex(rules: Rule[], enforcement: (r: Rule) => string): string[] {
   const esc = (s: string) => s.replace(/\|/g, "\\|");
   const rows = rules.map((r) => {
@@ -594,16 +644,15 @@ function renderIndex(rules: Rule[], enforcement: (r: Rule) => string): string[] 
     ];
   });
   const head = ["ID", "Rule", "Serves", "Tags", "Status", "Enforcement"];
-  const width = head.map((h, i) => Math.max(3, h.length, ...rows.map((r) => r[i].length)));
-  const line = (r: string[]) => `| ${r.map((c, i) => c.padEnd(width[i])).join(" | ")} |`;
-  return [line(head), `| ${width.map((w) => "-".repeat(w)).join(" | ")} |`, ...rows.map(line)];
+  const line = (r: string[]) => `| ${r.join(" | ")} |`;
+  return [line(head), `| ${head.map(() => "---").join(" | ")} |`, ...rows.map(line)];
 }
 
 // Markdown beside the ledger: specs, briefs, notes. A spec names the intents it serves and cites
 // rules for its decisions (br-M30), so an ID that matches nothing is a broken link, and a spec
 // that names no intent is not yet tied to the ledger.
-function checkDocs(ruleIds: Set<string>, intentIds: Set<string>) {
-  const skip = new Set([LEDGER, ...["BUSINESS-RULES-AUTHORING.md", "LEDGER-AUTHORING.md"].map((n) => join(dirname(LEDGER), n))]);
+function checkDocs(ruleIds: Set<string>, intentIds: Set<string>, areaFiles: string[]) {
+  const skip = new Set([LEDGER, ...areaFiles, ...["BUSINESS-RULES-AUTHORING.md", "LEDGER-AUTHORING.md"].map((n) => join(dirname(LEDGER), n))]);
   const docs: string[] = [];
   const find = (dir: string) => {
     for (const name of readdirSync(dir)) {
@@ -642,10 +691,57 @@ function checkDocs(ruleIds: Set<string>, intentIds: Set<string>) {
 function main() {
   const content = readFileSync(LEDGER, "utf8");
   const lines = content.split("\n");
-  const { rules, intents } = parseLedger(content);
+  const master = parseLedger(content, LEDGER);
+  const rules = [...master.rules];
+  const intents = [...master.intents];
+
+  // Area files, in registry order. Each holds the rules of the areas the registry gives it.
+  const areas = readRegistry(lines);
+  const areaFiles = [...new Set(areas.flatMap((a) => (a.file ? [a.file] : [])))];
+  const fileOf = new Map(areas.map((a) => [a.letter, a.file]));
+  const where = (f: string | null | undefined) => (f ? relative(ROOT, f) : "the master");
+  for (const file of areaFiles) {
+    const letters = areas.filter((a) => a.file === file).map((a) => a.letter).join(", ");
+    if (!existsSync(file)) {
+      errors.push(`Registry: area ${letters} is in ${where(file)}, which does not exist.`);
+      continue;
+    }
+    const part = parseLedger(readFileSync(file, "utf8"), file);
+    rules.push(...part.rules);
+    for (const i of part.intents) {
+      warnings.push(`${i.id}: in ${where(file)}. Intents belong in the master, where every area can serve them.`);
+      intents.push(i);
+    }
+  }
+  for (const r of rules) {
+    const letter = r.id[3];
+    if (letter === "M" || !fileOf.has(letter)) continue;
+    const expected = fileOf.get(letter) ?? LEDGER;
+    if (r.file !== expected)
+      errors.push(
+        `${r.id}: in ${where(r.file === LEDGER ? null : r.file)}, but the registry puts area ${letter} in ${where(fileOf.get(letter))}.`,
+      );
+  }
+  const seen = new Map<string, Rule>();
+  for (const r of rules) {
+    const first = seen.get(r.id);
+    if (first)
+      errors.push(
+        `${r.id}: defined twice, at ${relative(ROOT, first.file)}:${first.line} and ${relative(ROOT, r.file)}:${r.line}.`,
+      );
+    else seen.set(r.id, r);
+  }
+
   if (args.some((a) => a === "--tag" || a.startsWith("--tag="))) listTags(rules, intents);
   const ruleIds = new Set(rules.map((r) => r.id));
   const intentIds = new Set(intents.map((i) => i.id));
+
+  // These sections moved to BUSINESS-RULES-AUTHORING.md in 2.8.0, so every ledger file stays short.
+  for (const title of ["How to read this ledger", "Citing rules in code"])
+    if (section(lines, new RegExp(`^## ${title}\\s*$`)))
+      warnings.push(
+        `"${title}" now lives in BUSINESS-RULES-AUTHORING.md (2.8.0). Reinstall that file from the skill and remove the section from the ledger.`,
+      );
 
   const format = content.match(/Format: business-rules-ledger (\d+)\.\d+\.\d+/);
   if (!format || Number(format[1]) < 2) {
@@ -667,7 +763,7 @@ function main() {
   }
 
   const { citations, mentions, tests: codeTests, testsAt, unprefixed } = scanCode();
-  const docCount = checkDocs(ruleIds, intentIds);
+  const docCount = checkDocs(ruleIds, intentIds, areaFiles);
   const ledgerTests = new Set(rules.flatMap((r) => r.tests));
   for (const u of unprefixed) {
     const id = u.split(" ")[0];
@@ -835,12 +931,11 @@ function main() {
       process.exit(1);
     }
     const bare = r.id.slice(3);
-    const at = lines.findIndex((l) => new RegExp(`^## ${r.id}\\s*$`).test(l));
     const out: string[] = [];
     out.push(`${r.id}  ${r.fields.status ?? "no status"}, ${cellFor(r)}`);
     out.push(r.statement);
     out.push("");
-    out.push(`Entry:     ${relative(ROOT, LEDGER)}:${at + 1}`);
+    out.push(`Entry:     ${relative(ROOT, r.file)}:${r.line}`);
     out.push(`Serves:    ${r.fields.serves ?? "—"}`);
     out.push(`Tags:      ${r.tags.join(", ") || "—"}`);
     if (r.fields.gap) out.push(`Gap:       ${r.fields.gap}`);
@@ -863,14 +958,14 @@ function main() {
   const current = tableAt ? lines.slice(tableAt[0], tableAt[1]) : [];
   const sameTable =
     current.length === generated.length &&
-    current.every((l, i) => cells(l).join("|") === cells(generated[i]).join("|"));
+    current.every((l, i) => rowKey(l) === rowKey(generated[i]));
 
   const stale: string[] = [];
   if (VERIFY && !WRITE && idx && !sameTable) {
-    const before = new Map(current.map((l) => [cells(l)[0], cells(l).join("|")]));
+    const before = new Map(current.map((l) => [cells(l)[0], rowKey(l)]));
     for (const row of generated.slice(2)) {
       const id = cells(row)[0];
-      if (before.get(id) !== cells(row).join("|")) stale.push(`${id}: index row differs from the rule entry.`);
+      if (before.get(id) !== rowKey(row)) stale.push(`${id}: index row differs from the rule entry.`);
     }
     for (const id of before.keys())
       if (/^br-[A-Z]\d{2}$/.test(id) && !ruleIds.has(id)) stale.push(`${id}: in the index but has no entry.`);
@@ -900,6 +995,12 @@ function main() {
     warnings.push(
       `${attendedCount} of ${active.length} active rules are attended (over a third). Keep attended for money, deletion, security and customer data (br-M19).`,
     );
+  // One file stays readable to about 150 rules. Past that, an agent reads more than the work needs.
+  const inMaster = active.filter((r) => r.file === LEDGER).length;
+  if (inMaster > 150)
+    warnings.push(
+      `${inMaster} active rules in the master. Move areas into area files (see the registry's File column) so a reader loads only the areas the work touches.`,
+    );
   const settled = active.filter((r) => r.fields.status === "settled");
   const counts = Object.fromEntries(
     LEVELS.map((l) => [
@@ -912,7 +1013,9 @@ function main() {
   );
 
   const out: string[] = [];
-  out.push(`Ledger: ${relative(ROOT, LEDGER)}`);
+  out.push(
+    `Ledger: ${relative(ROOT, LEDGER)}${areaFiles.length ? ` and ${areaFiles.length} area file${areaFiles.length === 1 ? "" : "s"}: ${areaFiles.map((f) => relative(ROOT, f)).join(", ")}` : ""}`,
+  );
   out.push(
     `Rules: ${active.length} active (${STATUSES.filter((s) => s !== "retired")
       .map((s) => `${byStatus[s]} ${s}`)

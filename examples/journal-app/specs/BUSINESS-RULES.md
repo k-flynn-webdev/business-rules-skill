@@ -1,8 +1,8 @@
 # Business Rules Ledger — Journal app (example)
 
 Source of truth. Code and tests conform to this document.
-Written under the authoring rules in [`BUSINESS-RULES-AUTHORING.md`](BUSINESS-RULES-AUTHORING.md).
-Format: business-rules-ledger 2.7.2
+How to read it, cite it in code and write it: [`BUSINESS-RULES-AUTHORING.md`](BUSINESS-RULES-AUTHORING.md).
+Format: business-rules-ledger 2.8.0
 
 ---
 
@@ -106,104 +106,46 @@ Each domain term, defined once. Rules use these terms exactly.
 
 ## Index
 
-Built by `scripts/ledger-check.ts --write` from the rule entries below. Do not edit it by hand.
+Every rule, in this document or an area file. Built by `scripts/ledger-check.ts --write`. Do not edit it by hand.
 
-| ID     | Rule                                                                                                                                          | Serves      | Tags                    | Status            | Enforcement |
-| ------ | --------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ----------------------- | ----------------- | ----------- |
-| br-B01 | A track is a plain-text entry owned by a single user. The owner is the signed-in user who created it.                                         | in-02       | `track` `core`          | settled           | passing     |
-| br-B02 | Track text is between 2 and 200 characters, counted after trimming.                                                                           | in-01       | `track` `validation`    | settled           | passing     |
-| br-B05 | When a user deletes a track, then its deleted_at is set and the track stays in the database.                                                  | in-03       | `track` `delete`        | settled, attended | passing     |
-| br-B06 | A streak is a run of consecutive days, each with at least one non-deleted track. Its length is the number of days in the run.                 | in-04       | `streak`                | settled           | passing     |
-| br-B07 | The current streak is the length of the open streak, or 0. A streak stays open while its most recent day is today or yesterday.               | in-04       | `streak`                | settled           | cited       |
-| br-B08 | When a track is created and the current streak counting it is at least 7, then the streak notification shows.                                 | in-04       | `streak` `notification` | settled           | passing     |
-| br-B09 | The best streak is the length of the longest streak in the user's non-deleted tracks. A deletion can lower it.                                | in-04       | `streak`                | settled           | passing     |
-| br-B10 | The anniversary card shows up to 2 non-deleted tracks within ±3 days of the anniversary date, closest first, ties to the track created first. | in-05       | `anniversary`           | settled           | passing     |
-| br-B11 | When a track is created and no active Streak exists, then open a new Streak with start_date = today UTC.                                      | in-04       | `streak`                | retired           | —           |
-| br-B14 | When a user emails asking for erasure, then their account and every track, deleted ones too, are removed within one month.                    | in-03       | `delete` `privacy`      | settled, attended | none, gap   |
-| br-B16 | Stored streak data always equals br-B06 recomputed from the user's non-deleted tracks.                                                        | in-04       | `streak` `data`         | settled           | none        |
-| br-B21 | When a track is created or edited, then leading and trailing whitespace is removed; empty text is rejected.                                   | in-01       | `track` `validation`    | settled           | passing     |
-| br-B22 | When a user deletes a track by mistake, then they can restore it.                                                                             | in-03       | `track` `delete`        | open              | none        |
-| br-U02 | The feed shows 20 tracks per page.                                                                                                            | in-03       | `feed`                  | observed          | none        |
-| br-U05 | Track text is always displayed as plain text, never rendered as HTML.                                                                         | in-02 in-03 | `track` `security`      | settled           | none        |
-| br-A04 | The API identifies the user only from their session, never from ids sent in the request.                                                      | in-02       | `api` `security` `auth` | settled, attended | none        |
-| br-D03 | A track's day is its local_date: the user's calendar date, in their time zone, when the track was created. It never changes.                  | in-04 in-05 | `data` `time`           | settled           | passing     |
-| br-D05 | No log, error report or admin screen shows track text.                                                                                        | in-02       | `privacy` `security`    | settled           | none, gap   |
+| ID | Rule | Serves | Tags | Status | Enforcement |
+| --- | --- | --- | --- | --- | --- |
+| br-B01 | A track is a plain-text entry owned by a single user. The owner is the signed-in user who created it. | in-02 | `track` `core` | settled | passing |
+| br-B02 | Track text is between 2 and 200 characters, counted after trimming. | in-01 | `track` `validation` | settled | passing |
+| br-B05 | When a user deletes a track, then its deleted_at is set and the track stays in the database. | in-03 | `track` `delete` | settled, attended | passing |
+| br-B06 | A streak is a run of consecutive days, each with at least one non-deleted track. Its length is the number of days in the run. | in-04 | `streak` | settled | passing |
+| br-B07 | The current streak is the length of the open streak, or 0. A streak stays open while its most recent day is today or yesterday. | in-04 | `streak` | settled | cited |
+| br-B08 | When a track is created and the current streak counting it is at least 7, then the streak notification shows. | in-04 | `streak` `notification` | settled | passing |
+| br-B09 | The best streak is the length of the longest streak in the user's non-deleted tracks. A deletion can lower it. | in-04 | `streak` | settled | passing |
+| br-B10 | The anniversary card shows up to 2 non-deleted tracks within ±3 days of the anniversary date, closest first, ties to the track created first. | in-05 | `anniversary` | settled | passing |
+| br-B11 | When a track is created and no active Streak exists, then open a new Streak with start_date = today UTC. | in-04 | `streak` | retired | — |
+| br-B14 | When a user emails asking for erasure, then their account and every track, deleted ones too, are removed within one month. | in-03 | `delete` `privacy` | settled, attended | none, gap |
+| br-B16 | Stored streak data always equals br-B06 recomputed from the user's non-deleted tracks. | in-04 | `streak` `data` | settled | none |
+| br-B21 | When a track is created or edited, then leading and trailing whitespace is removed; empty text is rejected. | in-01 | `track` `validation` | settled | passing |
+| br-B22 | When a user deletes a track by mistake, then they can restore it. | in-03 | `track` `delete` | open | none |
+| br-U02 | The feed shows 20 tracks per page. | in-03 | `feed` | observed | none |
+| br-U05 | Track text is always displayed as plain text, never rendered as HTML. | in-02 in-03 | `track` `security` | settled | none |
+| br-A04 | The API identifies the user only from their session, never from ids sent in the request. | in-02 | `api` `security` `auth` | settled, attended | none |
+| br-D03 | A track's day is its local_date: the user's calendar date, in their time zone, when the track was created. It never changes. | in-04 in-05 | `data` `time` | settled | passing |
+| br-D05 | No log, error report or admin screen shows track text. | in-02 | `privacy` `security` | settled | none, gap |
 
----
-
-## How to read this ledger
-
-- A rule's ID is `br-` + area letter + two digits: `br-B03`. IDs are never reused. Its tests are `B03.1`, `B03.2` here, and `br-B03.1` in code.
-- An intent (`in-01`) is a user outcome. A rule's `serves:` names the intents it protects. `given:` names the rules it assumes are true.
-- Status: `observed` (read from code, not confirmed), `open` (questions unanswered), `settled` (decided), `retired` (no longer applies, kept for history). Only settled rules are decisions.
-- A rule's tests are the rows of its examples table, by the ID in the first column, and the numbered lines under **Tests**.
-- `> Fails if` is the condition that proves a rule broken. `gap:` records where the code does not conform yet.
-- The index is built from the rule entries by `scripts/ledger-check.ts`, which also computes enforcement. Never edit it by hand.
-- A rule's history is in its **Source** lines. The ledger keeps no change log; git does.
-- Specs and other documents may describe an area, but decisions live here. When they disagree with this ledger, this ledger wins.
-- Before adding or changing a rule, read the authoring rules (br-M) in [`BUSINESS-RULES-AUTHORING.md`](BUSINESS-RULES-AUTHORING.md).
-
----
-
-## Citing rules in code
-
-The ID is the link. `git grep -n "br-[X][NN]"` returns the rule, its tests, and the code that enforces it.
-`scripts/ledger-check.ts` reads the same citations to compute enforcement.
-
-A citation is the ID followed by a colon (`br-B07:`) or after `@see`. Mentioning a rule anywhere
-else, such as "(br-B07)" in an explanation, does not count as enforcement.
-
-```js
-/**
- * [What the function does.]
- * @see br-[X][NN] [The rule, in one line.]
- */
-function doTheThing(...) { ... }
-```
-
-```js
-// br-[X][NN]: [why this branch exists]
-if (condition) throw new SomeError();
-```
-
-```js
-test("br-[X][NN].1 [the test, in domain terms]", () => {
-  // Given [starting state]
-  // When [event]
-  // Then [outcome]
-});
-```
-
-```csharp
-[Fact(DisplayName = "br-[X][NN].1 [the test, in domain terms]")]  // NUnit: TestCase(TestName = …); MSTest: TestMethod("…")
-public void TheTest() { /* Given, When, Then */ }
-```
-
-Put the test ID in the test's display name, not the method name. Run .NET tests with
-`dotnet test --logger trx` and pass the TestResults folder to the checker's `--results=`.
-
-| Enforcement | Meaning                                                                                 |
-| ----------- | --------------------------------------------------------------------------------------- |
-| none        | No code cites the rule.                                                                 |
-| cited       | Code cites the rule, but not every ledger test has a named test in code.                |
-| tested      | Every ledger test has a test named after it in code.                                    |
-| passing     | Those tests all passed in the supplied results. This does not prove they test the rule. |
-
-`, gap` means the rule has a known divergence recorded in its `gap:` line.
 
 ---
 
 ## Registry
 
-| Letter | Area                                                |
-| ------ | --------------------------------------------------- |
-| M      | How to write rules (in BUSINESS-RULES-AUTHORING.md) |
-| B      | Business                                            |
-| U      | Interface                                           |
-| A      | API                                                 |
-| D      | Data                                                |
+| Letter | Area | File | Owner |
+| --- | --- | --- | --- |
+| M | How to write rules | BUSINESS-RULES-AUTHORING.md | — |
+| B | Business | — | — |
+| U | Interface | — | — |
+| A | API | — | — |
+| D | Data | — | — |
 
-Add a letter when a rule needs it. Not before.
+Add a letter when a rule needs it. Not before. `File` is `—` while an area's rules live in this
+document. When an area outgrows it, move its rules to an area file and name the file here; the
+checker reads it and keeps every rule in the index above. `Owner` is who settles that area's open
+rules.
 
 Retire an ID. Never reuse one — rule or intent.
 
