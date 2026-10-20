@@ -32,6 +32,19 @@ in the master. The index in the master still lists all 16 rules, and the checker
 A change to the home page reads the master and `rules/interface.md`, about 3.8k tokens, instead of
 the whole 6.4k-token ledger it was before the split. See _Area files_ in the skill.
 
+Each owner can see their own areas. `npm run area` lists them:
+
+```
+   Area       File                      Owner          Rules  Settled  Passing  Waiting
+B  Business   specs/rules/business.md   Product owner      7        7        6        0
+U  Interface  specs/rules/interface.md  Design lead        6        6        0        0
+A  API        the master                Product owner      1        1        0        0
+D  Data       the master                Product owner      2        2        0        0
+```
+
+`npm run area U` is the design lead's report: the six Interface rules, the ones not yet passing,
+and only the warnings about them. Errors and warnings from other areas are counted, not shown.
+
 ## Run it
 
 ```sh
@@ -41,6 +54,8 @@ npm run typecheck
 npm run ledger           # run the tests, rebuild the index, report enforcement
 npm run ledger:verify    # what CI runs: fails if the index is stale
 npm run ledger:audio     # a listening script of the intents and rules
+npm run area             # the areas, their owners and what is waiting on each
+npm run area U           # the report for one area
 ```
 
 `npm run ledger` prints:

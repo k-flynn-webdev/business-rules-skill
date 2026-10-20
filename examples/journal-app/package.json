@@ -10,7 +10,8 @@
         "ledger": "npm run test:results; tsx scripts/ledger-check.ts --results=test-results.json --write",
         "ledger:verify": "npm run test:results && tsx scripts/ledger-check.ts --results=test-results.json --verify",
         "ledger:audio": "tsx scripts/audio-ledger.ts",
-        "rule": "tsx scripts/ledger-check.ts --rule"
+        "rule": "tsx scripts/ledger-check.ts --rule",
+        "area": "tsx scripts/ledger-check.ts --area"
     },
     "devDependencies": {
         "@types/node": "26.6.2",

@@ -245,6 +245,8 @@ specs/rules/accounts.md
 - **IDs never change,** so code, tests and tickets that cite a rule stay right when it moves.
 - **One index, in the master, lists every rule.** The checker builds it from every file, fails CI
   when it is out of date, and reports a missing file, a rule in the wrong file or a duplicate ID.
+- **Each owner gets their own report.** `--area` lists the areas with their owners and what is
+  waiting on each; `--area=B` shows one area's report, and `--area=B --require=tested` gates it in CI.
 - **What everyone shares lives once,** in `BUSINESS-RULES-AUTHORING.md`: how to read the ledger,
   how to cite it, and the authoring rules. The ledger holds only this product's content.
 
@@ -283,7 +285,7 @@ scripts/check.sh              one version everywhere; each example's copies matc
 Build the zip, or download it from the repo's releases when there is one:
 
 ```sh
-./scripts/package.sh        # → dist/business-rules-ledger-2.8.0.zip
+./scripts/package.sh        # → dist/business-rules-ledger-2.9.0.zip
 ```
 
 - **Claude apps (claude.ai, Desktop):** upload the zip as a custom skill in Claude's settings,
@@ -322,6 +324,8 @@ npx tsx scripts/ledger-check.ts --verify                # exit 1 if the index is
 npx tsx scripts/ledger-check.ts --require=tested        # exit 1 if a settled rule has no tests
 npx tsx scripts/ledger-check.ts --tag=privacy           # list the rules carrying a tag
 npx tsx scripts/ledger-check.ts --rule br-B02           # one rule: entry, citations, tests
+npx tsx scripts/ledger-check.ts --area                  # list the areas: file, owner, what is waiting
+npx tsx scripts/ledger-check.ts --area=B                # the report for one area
 npx tsx scripts/ledger-check.ts --waiting               # list everything waiting on the owner, not only the oldest 10
 ```
 
@@ -346,7 +350,7 @@ Its ledger is split into a master and two area files, to show how a larger produ
 
 ## Versions
 
-The skill is at **2.8.0**. Every ledger states its format (`Format: business-rules-ledger 2.8.0`),
+The skill is at **2.9.0**. Every ledger states its format (`Format: business-rules-ledger 2.9.0`),
 and the skill offers to upgrade an older ledger, listing the changes first. What changed in each
 version is in the changelog at the end of [`SKILL.md`](business-rules-ledger/SKILL.md).
 
