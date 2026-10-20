@@ -1,8 +1,8 @@
 # Business Rules Ledger — [project]
 
 Source of truth. Code and tests conform to this document.
-Written under the authoring rules in [`BUSINESS-RULES-AUTHORING.md`](BUSINESS-RULES-AUTHORING.md).
-Format: business-rules-ledger 2.7.2
+How to read it, cite it in code and write it: [`BUSINESS-RULES-AUTHORING.md`](BUSINESS-RULES-AUTHORING.md).
+Format: business-rules-ledger 2.8.0
 
 ---
 
@@ -39,7 +39,7 @@ Each domain term, defined once. Rules use these terms exactly.
 
 ## Index
 
-Built by `scripts/ledger-check.ts --write` from the rule entries below. Do not edit it by hand.
+Every rule, in this document or an area file. Built by `scripts/ledger-check.ts --write`. Do not edit it by hand.
 
 | ID     | Rule                                             | Serves | Tags        | Status  | Enforcement |
 | ------ | ------------------------------------------------ | ------ | ----------- | ------- | ----------- |
@@ -48,79 +48,20 @@ Built by `scripts/ledger-check.ts --write` from the rule entries below. Do not e
 
 ---
 
-## How to read this ledger
-
-- A rule's ID is `br-` + area letter + two digits: `br-B03`. IDs are never reused. Its tests are `B03.1`, `B03.2` here, and `br-B03.1` in code.
-- An intent (`in-01`) is a user outcome. A rule's `serves:` names the intents it protects. `given:` names the rules it assumes are true.
-- Status: `observed` (read from code, not confirmed), `open` (questions unanswered), `settled` (decided), `retired` (no longer applies, kept for history). Only settled rules are decisions.
-- A rule's tests are the rows of its examples table, by the ID in the first column, and the numbered lines under **Tests**.
-- `> Fails if` is the condition that proves a rule broken. `gap:` records where the code does not conform yet.
-- The index is built from the rule entries by `scripts/ledger-check.ts`, which also computes enforcement. Never edit it by hand.
-- A rule's history is in its **Source** lines. The ledger keeps no change log; git does.
-- Specs and other documents may describe an area, but decisions live here. When they disagree with this ledger, this ledger wins.
-- Before adding or changing a rule, read the authoring rules (br-M) in [`BUSINESS-RULES-AUTHORING.md`](BUSINESS-RULES-AUTHORING.md).
-
----
-
-## Citing rules in code
-
-The ID is the link. `git grep -n "br-[X][NN]"` returns the rule, its tests, and the code that enforces it.
-`scripts/ledger-check.ts` reads the same citations to compute enforcement.
-
-A citation is the ID followed by a colon (`br-B07:`) or after `@see`. Mentioning a rule anywhere
-else, such as "(br-B07)" in an explanation, does not count as enforcement.
-
-```js
-/**
- * [What the function does.]
- * @see br-[X][NN] [The rule, in one line.]
- */
-function doTheThing(...) { ... }
-```
-
-```js
-// br-[X][NN]: [why this branch exists]
-if (condition) throw new SomeError();
-```
-
-```js
-test("br-[X][NN].1 [the test, in domain terms]", () => {
-  // Given [starting state]
-  // When [event]
-  // Then [outcome]
-});
-```
-
-```csharp
-[Fact(DisplayName = "br-[X][NN].1 [the test, in domain terms]")]  // NUnit: TestCase(TestName = …); MSTest: TestMethod("…")
-public void TheTest() { /* Given, When, Then */ }
-```
-
-Put the test ID in the test's display name, not the method name. Run .NET tests with
-`dotnet test --logger trx` and pass the TestResults folder to the checker's `--results=`.
-
-| Enforcement | Meaning                                                                                 |
-| ----------- | --------------------------------------------------------------------------------------- |
-| none        | No code cites the rule.                                                                 |
-| cited       | Code cites the rule, but not every ledger test has a named test in code.                |
-| tested      | Every ledger test has a test named after it in code.                                    |
-| passing     | Those tests all passed in the supplied results. This does not prove they test the rule. |
-
-`, gap` means the rule has a known divergence recorded in its `gap:` line.
-
----
-
 ## Registry
 
-| Letter | Area                                        |
-| ------ | ------------------------------------------- |
-| M      | How to write rules (in BUSINESS-RULES-AUTHORING.md) |
-| B      | Business                                    |
-| U      | Interface                                   |
-| A      | API                                         |
-| D      | Data                                        |
+| Letter | Area | File | Owner |
+| --- | --- | --- | --- |
+| M | How to write rules | BUSINESS-RULES-AUTHORING.md | — |
+| B | Business | — | — |
+| U | Interface | — | — |
+| A | API | — | — |
+| D | Data | — | — |
 
-Add a letter when a rule needs it. Not before.
+Add a letter when a rule needs it. Not before. `File` is `—` while an area's rules live in this
+document. When an area outgrows it, move its rules to an area file such as `rules/billing.md` and
+name the file here; the checker reads it and keeps every rule in the index above. `Owner` is who
+settles that area's open rules.
 
 Retire an ID. Never reuse one — rule or intent.
 
