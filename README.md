@@ -122,7 +122,7 @@ IDs and writes each rule's enforcement into the ledger's index:
 | `in-01`  | An intent: what a user should be able to do. Every rule serves one.                          |
 | `br-B02` | A rule. The letter is its area: **B** business, **U** interface, **A** API, **D** data. Add letters as you need them. |
 | `B02.1`  | A test of br-B02, as the ledger lists it. In code the test is named `br-B02.1`.              |
-| `br-M22` | An authoring rule: how to write rules. These live in `BUSINESS-RULES-AUTHORING.md`, not in your code. |
+| `br-M22` | An authoring rule: how to write rules. These live in `BUSINESS-RULES-AUTHORING.md`, with how to read and cite the ledger. |
 
 ### Searching by ID
 
@@ -230,6 +230,28 @@ Five habits. Most are one line.
 - **Before the PR,** run the checker. In CI, run the tests with a results file, then
   `ledger-check.ts --results=… --verify --require=tested`.
 
+## When the ledger grows
+
+A ledger stays one file while it is small. Past about 100 rules, move areas into **area files**,
+so a reader loads only what the work touches:
+
+```
+specs/BUSINESS-RULES.md      the master: intents, glossary, the index of every rule, registry
+specs/rules/billing.md       one area's rules, and nothing else
+specs/rules/accounts.md
+```
+
+- **The registry says where each area lives,** and who owns it: `| B | Billing | rules/billing.md | @payments |`.
+- **IDs never change,** so code, tests and tickets that cite a rule stay right when it moves.
+- **One index, in the master, lists every rule.** The checker builds it from every file, fails CI
+  when it is out of date, and reports a missing file, a rule in the wrong file or a duplicate ID.
+- **What everyone shares lives once,** in `BUSINESS-RULES-AUTHORING.md`: how to read the ledger,
+  how to cite it, and the authoring rules. The ledger holds only this product's content.
+
+In the quote example, a change to the interface now reads about 3.8k tokens (the master and one
+area file) instead of the whole 6.4k-token ledger. At 500–750 rules the difference is a session
+that reads about 45k tokens instead of about 200k.
+
 ## Where it came from
 
 This skill grew out of rebuilding a real production app on a new stack. The ledger became the
@@ -251,7 +273,7 @@ business-rules-ledger/        the skill: install this folder
     └── lite-spec-template.md         a one-page overview of an area, beside the ledger
 
 examples/journal-app/         a small app built against a ledger. Start here.
-examples/quote-app/           a ledger written after the app shipped, with what the checker finds
+examples/quote-app/           a ledger written after the app shipped, split into area files
 scripts/package.sh            builds dist/business-rules-ledger-<version>.zip
 scripts/check.sh              one version everywhere; each example's copies match the assets (--fix syncs)
 ```
@@ -261,7 +283,7 @@ scripts/check.sh              one version everywhere; each example's copies matc
 Build the zip, or download it from the repo's releases when there is one:
 
 ```sh
-./scripts/package.sh        # → dist/business-rules-ledger-2.7.2.zip
+./scripts/package.sh        # → dist/business-rules-ledger-2.8.0.zip
 ```
 
 - **Claude apps (claude.ai, Desktop):** upload the zip as a custom skill in Claude's settings,
@@ -320,10 +342,11 @@ with a ledger written during and after the build. It is a quote-of-the-day app, 
 real one, with its real ledger upgraded to the current format. Its report shows what a ledger
 catches on an existing app: rules settled on intents nobody confirmed, page rules nothing
 tests, a gap the first checker run found, and an old spec beside the ledger that contradicts it.
+Its ledger is split into a master and two area files, to show how a larger product is laid out.
 
 ## Versions
 
-The skill is at **2.7.2**. Every ledger states its format (`Format: business-rules-ledger 2.7.2`),
+The skill is at **2.8.0**. Every ledger states its format (`Format: business-rules-ledger 2.8.0`),
 and the skill offers to upgrade an older ledger, listing the changes first. What changed in each
 version is in the changelog at the end of [`SKILL.md`](business-rules-ledger/SKILL.md).
 
