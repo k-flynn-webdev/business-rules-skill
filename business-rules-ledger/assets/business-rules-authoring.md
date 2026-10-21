@@ -20,7 +20,7 @@ edit them per project.
 - A rule's tests are the rows of its examples table, by the ID in the first column, and the numbered lines under **Tests**.
 - `> Fails if` is the condition that proves a rule broken. `gap:` records where the code does not conform yet.
 - The index is built from the rule entries by `scripts/ledger-check.ts`, which also computes enforcement. Never edit it by hand.
-- A large ledger keeps some areas in area files. The registry in the ledger names each area's file and owner; the index in the ledger lists every rule, wherever it lives.
+- A large ledger keeps some areas in area files. The registry in the ledger names each area's file and owner; the index in the ledger lists every rule, wherever it lives. To read one area's rows only: `ledger-check.ts --index --area=B`.
 - A rule's history is in its **Source** lines. The ledger keeps no change log; git does.
 - Specs and other documents may describe an area, but decisions live in the ledger. When they disagree with the ledger, the ledger wins.
 - Before adding or changing a rule, read the authoring rules (br-M) below.

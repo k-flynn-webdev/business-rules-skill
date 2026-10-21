@@ -44,6 +44,8 @@ D  Data       the master                Product owner      2        2        0  
 
 `npm run area U` is the design lead's report: the six Interface rules, the ones not yet passing,
 and only the warnings about them. Errors and warnings from other areas are counted, not shown.
+`npx tsx scripts/ledger-check.ts --index --area=U` prints the six Interface rows of the index,
+about a third of the whole table.
 
 ## Run it
 
@@ -56,6 +58,7 @@ npm run ledger:verify    # what CI runs: fails if the index is stale
 npm run ledger:audio     # a listening script of the intents and rules
 npm run area             # the areas, their owners and what is waiting on each
 npm run area U           # the report for one area
+npm run ledger:audio -- --area=U   # listen to one area: its rules and the intents they serve
 ```
 
 `npm run ledger` prints:

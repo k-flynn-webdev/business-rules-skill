@@ -587,6 +587,9 @@ review mode read the tests of any `attended: required` rule against its Fails if
   warnings about their rules, plus anything about the ledger as a whole. Messages about other
   areas and intents are only counted. The exit code follows what is shown, so `--require` gates
   one area. Every rule is still read and checked, and `--write` still builds the whole index
+- with `--index`, prints the index as `--write` would build it, instead of the report; with
+  `--area=B`, only that area's rows. An agent working in one area of a large ledger reads that
+  instead of the whole index
 - reads the registry and every area file it names, and reports a missing file, a rule in a file
   the registry does not give its area, and an ID that appears twice. It warns when more than 150
   active rules sit in the master, and when the ledger still carries _How to read this ledger_ or
@@ -685,13 +688,16 @@ Use when the user says "read me the rules", "audio", "listen", or asks for an au
 who it is for, what broken looks like, the non-goals and the intent's tags — then the rules that
 serve it: ID, tags, statement and Fails if. No tests, sources or metadata. M rules and retired rules are skipped.
 Rules with no intent are read last. A 1.x ledger with no intents falls back to grouping by area.
+With `--area=B` (or a name, an area file, or `B,U`), it reads only those areas' rules, and only the
+intents they serve.
 You hear the why before the what, which is where listening beats reading.
 
 1. Check whether `scripts/audio-ledger.ts` exists in the project.
    - **Yes** — run `npx tsx scripts/audio-ledger.ts` and return the output.
    - **No** — offer to install it, then run it.
 2. Offer to save it: `npx tsx scripts/audio-ledger.ts --out=rules-audio.txt`. On macOS,
-   `--speak` reads it aloud.
+   `--speak` reads it aloud. When the ledger has area files and the listener owns one area, offer
+   `--area=` for just that area.
 
 **Installing:** copy `assets/audio-ledger.ts` to `scripts/audio-ledger.ts`. If `tsx` is a
 dependency, add `"audio:ledger": "tsx scripts/audio-ledger.ts"` to `package.json`.
@@ -775,8 +781,9 @@ Upgrading 2.x to 2.9.0 is mechanical; no rule changes:
     registry, with `—` for every area. To get the shorter, unpadded index, delete the index
     table's rows and run `--write`. Over about 100 rules, offer to split areas into area files
     (see _Area files_); do not split unasked.
-14. From 2.8.0: reinstall the checker. The format is unchanged. `--area` lists the areas, and
-    `--area=B` narrows the report to one; offer the `area` script if the ledger has area files.
+14. From 2.8.0: reinstall the authoring file and both scripts. The format is unchanged. `--area`
+    lists the areas, `--area=B` narrows the report to one, `--index --area=B` prints its index rows,
+    and the audio script takes `--area=` too; offer the `area` script if the ledger has area files.
 
 Upgrading 1.x to 2.9.0, in stages the user can stop between:
 
@@ -838,7 +845,8 @@ specs/rules/accounts.md
   cite it stay right. `--rule` and `git grep` find it wherever it is.
 - **The index stays in the master, and lists every rule.** `--write` builds it from the master and
   every area file; `--verify` fails when it is out of date. A reader scans the index to find the
-  rules a task touches, then opens their area files or runs `--rule`.
+  rules a task touches, then opens their area files or runs `--rule`. Working in one area,
+  `--index --area=B` prints just its rows.
 - **Intents and the glossary stay in the master.** Every area serves the same intents and uses the
   same terms. An area file starts with a heading, a line linking the master and the authoring
   file, and then its rule entries.
@@ -1012,7 +1020,7 @@ is now true. Do not write the new one and leave both standing.
 
 ## Changelog
 
-- **2.9.0** — 2026-10-21 — Reports by area. `--area` lists the areas with each one's file, owner and counts of active, settled, passing and waiting rules. `--area=B` (also a name, an area file's path, or `B,U`) narrows the report to those areas: counts, rules not yet passing, waiting list, gaps, and their errors and warnings, with the rest counted under _Elsewhere in the ledger_. The exit code follows what is shown, so `--require` can gate one area; the whole ledger is still checked and the index stays whole. `--tag` respects `--area`. A `—` owner reads as none. Format unchanged.
+- **2.9.0** — 2026-10-21 — Reports by area. `--area` lists the areas with each one's file, owner and counts of active, settled, passing and waiting rules. `--area=B` (also a name, an area file's path, or `B,U`) narrows the report to those areas: counts, rules not yet passing, waiting list, gaps, and their errors and warnings, with the rest counted under _Elsewhere in the ledger_. The exit code follows what is shown, so `--require` can gate one area; the whole ledger is still checked and the index stays whole. `--tag` respects `--area`. `--index` prints the index instead of the report, and `--index --area=B` only that area's rows, so an agent on a large ledger reads its slice. The audio script takes `--area=` and reads only those areas' rules and the intents they serve. The authoring file points readers at `--index --area`. A `—` owner reads as none. Format unchanged.
 - **2.8.0** — 2026-10-20 — Room for a large product. A ledger can keep areas in area files: the registry gains `File` and `Owner` columns, the checker reads every area file it names and reports a missing file, a rule in the wrong file and a duplicate ID, and the one index stays in the master, listing every rule. New _Area files_ section; the checker warns past 150 rules in the master. _How to read this ledger_ and _Citing rules in code_ move into `BUSINESS-RULES-AUTHORING.md`, so the ledger holds only its own content. The index is unpadded. `--rule` and the audio script read area files. Upgrade step 13.
 - **2.7.2** — 2026-10-19 — UI and visual design belong in lite specs, not the ledger: if the product would behave differently it is a rule, if it would only look different it is not. _Lite specs_ gains a look-and-feel row and paragraph, and the template a _Look and feel_ section. The checker's `--rule br-B02` prints one rule: statement, status, enforcement, entry line, citations, tests with file and line, and mentions that are not citations; installing the checker adds a `rule` script to `package.json`. Docs search rule IDs with `git grep`, which skips ignored files such as test results and `node_modules`. Upgrade step 12.
 - **2.7.1** — 2026-10-12 — The 2.7.0 report, tuned on a 54-rule ledger built from code. _Waiting on the owner_ shows the 10 oldest entries with counts by kind (`--waiting` lists all), instead of 60 lines on every run. An observed entry is dated from its oldest source line, when it was read, so an amendment no longer resets its age; an open rule still dates from its newest. Ages use the local date, as ledger dates do. Documents that name no intent come as one warning, and a document that is not a product spec opts out with `<!-- ledger: not a spec -->`. Upgrade step 11. The smallest-complete-rule example (br-B20) says "less than 15 minutes" instead of "within", so its statement and Fails if agree with its test at exactly 15 minutes.

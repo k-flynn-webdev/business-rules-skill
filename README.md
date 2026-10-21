@@ -247,6 +247,7 @@ specs/rules/accounts.md
   when it is out of date, and reports a missing file, a rule in the wrong file or a duplicate ID.
 - **Each owner gets their own report.** `--area` lists the areas with their owners and what is
   waiting on each; `--area=B` shows one area's report, and `--area=B --require=tested` gates it in CI.
+  `--index --area=B` prints just that area's index rows, and the audio script takes `--area=B` too.
 - **What everyone shares lives once,** in `BUSINESS-RULES-AUTHORING.md`: how to read the ledger,
   how to cite it, and the authoring rules. The ledger holds only this product's content.
 
@@ -326,6 +327,7 @@ npx tsx scripts/ledger-check.ts --tag=privacy           # list the rules carryin
 npx tsx scripts/ledger-check.ts --rule br-B02           # one rule: entry, citations, tests
 npx tsx scripts/ledger-check.ts --area                  # list the areas: file, owner, what is waiting
 npx tsx scripts/ledger-check.ts --area=B                # the report for one area
+npx tsx scripts/ledger-check.ts --index --area=B        # one area's rows of the index
 npx tsx scripts/ledger-check.ts --waiting               # list everything waiting on the owner, not only the oldest 10
 ```
 

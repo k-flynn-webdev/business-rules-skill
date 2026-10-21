@@ -19,6 +19,7 @@
  *   npx tsx scripts/ledger-check.ts --area                  list the areas: file, owner, rules, settled, passing, waiting
  *   npx tsx scripts/ledger-check.ts --area=B                the report for one area (or B,U; a name; an area file).
  *                                                            Works with --waiting and --require; the index stays whole.
+ *   npx tsx scripts/ledger-check.ts --index                 print the index as built from the rules (--area=B: its rows only)
  *   npx tsx scripts/ledger-check.ts [ledger] --root=.       ledger defaults to specs/BUSINESS-RULES.md
  *
  * The ledger is the master. When its registry names a file for an area, that area's rules live in
@@ -114,6 +115,8 @@ const areaAt = args.indexOf("--area");
 const areaNext = areaAt >= 0 && args[areaAt + 1] && !args[areaAt + 1].startsWith("--") ? areaAt + 1 : -1;
 const AREA_ARG = flag("area") ?? (areaNext >= 0 ? args[areaNext] : undefined);
 const LIST_AREAS = areaAt >= 0 && areaNext < 0;
+// --index prints the index instead of the report, so a reader on one area reads only its rows.
+const PRINT_INDEX = args.includes("--index");
 const ROOT = resolve(flag("root") ?? process.cwd());
 const LEDGER = resolve(
   args.find(
@@ -1031,6 +1034,11 @@ function main() {
     rules.filter((r) => !r.id.startsWith("br-M")),
     cellFor,
   );
+  if (PRINT_INDEX) {
+    const rows = generated.slice(2).filter((row) => inArea(cells(row)[0]));
+    console.log([...generated.slice(0, 2), ...rows].join("\n"));
+    process.exit(0);
+  }
   const current = tableAt ? lines.slice(tableAt[0], tableAt[1]) : [];
   const sameTable =
     current.length === generated.length &&
