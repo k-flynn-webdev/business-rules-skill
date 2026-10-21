@@ -1,12 +1,14 @@
 #!/usr/bin/env tsx
 /**
  * Generates a listening-friendly script from the business rules ledger: each intent, then the rules that serve it.
- * Version 2.8.0 — ships with the business-rules-ledger skill. Reinstall from the skill to update.
+ * Version 2.9.0 — ships with the business-rules-ledger skill. Reinstall from the skill to update.
  *
  * Usage:
  *   npx tsx scripts/audio-ledger.ts              — print to stdout
  *   npx tsx scripts/audio-ledger.ts --out=rules.txt
  *   npx tsx scripts/audio-ledger.ts --speak       — pipe to macOS say
+ *   npx tsx scripts/audio-ledger.ts --area=U      — one area (or U,B; its name; its area file),
+ *                                                  with only the intents its rules serve
  *   npx tsx scripts/audio-ledger.ts [path] [flags]
  */
 
@@ -16,9 +18,16 @@ import { execSync } from "child_process";
 import { tmpdir } from "os";
 
 const args = process.argv.slice(2);
-const LEDGER =
-  args.find((a) => !a.startsWith("--")) ??
-  join(process.cwd(), "specs/BUSINESS-RULES.md");
+// --area takes its value after = or as the next argument: --area=U, --area U.
+const areaAt = args.indexOf("--area");
+const areaNext =
+  areaAt >= 0 && args[areaAt + 1] && !args[areaAt + 1].startsWith("--") ? areaAt + 1 : -1;
+const AREA_ARG =
+  args.find((a) => a.startsWith("--area="))?.slice(7) ?? (areaNext >= 0 ? args[areaNext] : undefined);
+const LEDGER = resolve(
+  args.find((a, i) => !a.startsWith("--") && i !== areaNext) ??
+    join(process.cwd(), "specs/BUSINESS-RULES.md"),
+);
 const SPEAK = args.includes("--speak");
 const OUT = args.find((a) => a.startsWith("--out="))?.slice(6);
 
@@ -214,8 +223,12 @@ function byArea(rules: Rule[], out: string[]) {
   }
 }
 
-function buildScript(rules: Rule[], intents: Intent[]): string {
+function buildScript(rules: Rule[], intents: Intent[], area: Set<string> | null): string {
   const out: string[] = [];
+  if (area) {
+    const names = [...area].map((l) => AREA_NAMES[l] ?? l).join(" and ");
+    out.push(`${names} rules (${rules.length}).`, "");
+  }
 
   if (intents.length === 0) {
     byArea(rules, out);
@@ -227,6 +240,8 @@ function buildScript(rules: Rule[], intents: Intent[]): string {
     const serving = rules.filter(
       (r) => r.serves.find((s) => known.has(s)) === intent.id,
     );
+    // One area serves some intents, not all; read only those.
+    if (area && !serving.length) continue;
     out.push(`Intent ${intent.id.toUpperCase()}.`, clean(intent.statement));
     if (intent.tags.length) out.push(`Tags: ${intent.tags.join(", ")}.`);
     if (intent.forWhom) out.push(`For ${clean(intent.forWhom)}`);
@@ -249,13 +264,19 @@ function buildScript(rules: Rule[], intents: Intent[]): string {
   return out.join("\n");
 }
 
+interface Area {
+  letter: string;
+  name: string;
+  file: string;
+}
+
 // The master's registry may give an area its own file: | Letter | Area | File | Owner |.
 // Those files hold that area's rules, so the script reads them after the master.
-function withAreaFiles(master: string): string {
+function readRegistry(master: string): Area[] {
   const lines = master.split("\n");
   const start = lines.findIndex((l) => /^## Registry\s*$/.test(l));
-  if (start < 0) return master;
-  const files: string[] = [];
+  if (start < 0) return [];
+  const areas: Area[] = [];
   let header: string[] = [];
   for (let i = start + 1; i < lines.length && !/^## /.test(lines[i]); i++) {
     const row = lines[i].trim();
@@ -265,24 +286,51 @@ function withAreaFiles(master: string): string {
       header = cells.map((c) => c.toLowerCase());
       continue;
     }
-    const letter = cells[header.indexOf("letter")] ?? "";
+    const letter = (cells[header.indexOf("letter")] ?? "").replace(/`/g, "");
     const name = cells[header.indexOf("area")] ?? "";
-    if (/^[A-Z]$/.test(letter) && name && !AREA_NAMES[letter]) AREA_NAMES[letter] = name;
+    // M names the authoring file, which holds no ledger rules.
+    if (!/^[A-Z]$/.test(letter) || letter === "M") continue;
+    if (name && !AREA_NAMES[letter]) AREA_NAMES[letter] = name;
     const file = (cells[header.indexOf("file")] ?? "")
       .replace(/^\[[^\]]*\]\(([^)]*)\)$/, "$1")
       .replace(/`/g, "")
       .trim();
-    // M names the authoring file, which holds no ledger rules.
-    const path =
-      file && letter !== "M" && !/^[—–-]$/.test(file) ? resolve(dirname(LEDGER), file) : "";
-    if (path && !files.includes(path)) files.push(path);
+    const path = file && !/^[—–-]$/.test(file) ? resolve(dirname(LEDGER), file) : "";
+    areas.push({ letter, name: name || AREA_NAMES[letter] || letter, file: path });
   }
-  return [master, ...files.map((f) => readFileSync(f, "utf8"))].join("\n");
+  return areas;
+}
+
+// --area: the letters a value names. A letter, an area's name or an area file's path, comma-separated.
+function areaLetters(spec: string, areas: Area[], rules: Rule[]): Set<string> {
+  const known = new Set([...areas.map((a) => a.letter), ...rules.map((r) => r.id[3])]);
+  const out = new Set<string>();
+  for (const value of spec.split(",").map((v) => v.trim()).filter(Boolean)) {
+    const found = [
+      ...(known.has(value.toUpperCase()) ? [value.toUpperCase()] : []),
+      ...areas.filter((a) => a.name.toLowerCase() === value.toLowerCase()).map((a) => a.letter),
+      ...areas
+        .filter((a) => a.file && [resolve(value), resolve(dirname(LEDGER), value)].includes(a.file))
+        .map((a) => a.letter),
+    ];
+    if (!found.length) {
+      const names = [...known].map((l) => (AREA_NAMES[l] ? `${l} ${AREA_NAMES[l]}` : l));
+      console.error(`--area: no area "${value}". Areas: ${names.join(", ") || "none"}.`);
+      process.exit(2);
+    }
+    for (const l of found) out.add(l);
+  }
+  return out;
 }
 
 function main() {
-  const { rules, intents } = parse(withAreaFiles(readFileSync(LEDGER, "utf8")));
-  const script = buildScript(rules, intents);
+  const master = readFileSync(LEDGER, "utf8");
+  const areas = readRegistry(master);
+  const files = [...new Set(areas.map((a) => a.file).filter(Boolean))];
+  const all = parse([master, ...files.map((f) => readFileSync(f, "utf8"))].join("\n"));
+  const area = AREA_ARG ? areaLetters(AREA_ARG, areas, all.rules) : null;
+  const rules = area ? all.rules.filter((r) => area.has(r.id[3])) : all.rules;
+  const script = buildScript(rules, all.intents, area);
 
   if (OUT) {
     writeFileSync(OUT, script, "utf8");

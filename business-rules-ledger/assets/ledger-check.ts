@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 /**
  * Checks a business rules ledger against the codebase, lints it, and computes each rule's enforcement.
- * Version 2.8.0 — ships with the business-rules-ledger skill. Reinstall from the skill to update.
+ * Version 2.9.0 — ships with the business-rules-ledger skill. Reinstall from the skill to update.
  *
  * Usage:
  *   npx tsx scripts/ledger-check.ts                         report only
@@ -16,6 +16,10 @@
  *   npx tsx scripts/ledger-check.ts --tag=boilerplate       list the rules and intents carrying that tag
  *   npx tsx scripts/ledger-check.ts --rule=br-B02           one rule: its entry, enforcement, citations and tests
  *                                                            (--rule br-B02 and --rule B02 work too)
+ *   npx tsx scripts/ledger-check.ts --area                  list the areas: file, owner, rules, settled, passing, waiting
+ *   npx tsx scripts/ledger-check.ts --area=B                the report for one area (or B,U; a name; an area file).
+ *                                                            Works with --waiting and --require; the index stays whole.
+ *   npx tsx scripts/ledger-check.ts --index                 print the index as built from the rules (--area=B: its rows only)
  *   npx tsx scripts/ledger-check.ts [ledger] --root=.       ledger defaults to specs/BUSINESS-RULES.md
  *
  * The ledger is the master. When its registry names a file for an area, that area's rules live in
@@ -105,10 +109,19 @@ const flag = (name: string) => {
 // --rule also takes its ID as the next argument, so `npm run rule br-B02` works.
 const ruleAt = args.indexOf("--rule");
 const ruleArg = ruleAt >= 0 ? args[ruleAt + 1] : undefined;
+// --area too: --area B, --area=B,U, --area=Business or --area=specs/rules/business.md.
+// A bare --area lists the areas instead of the report.
+const areaAt = args.indexOf("--area");
+const areaNext = areaAt >= 0 && args[areaAt + 1] && !args[areaAt + 1].startsWith("--") ? areaAt + 1 : -1;
+const AREA_ARG = flag("area") ?? (areaNext >= 0 ? args[areaNext] : undefined);
+const LIST_AREAS = areaAt >= 0 && areaNext < 0;
+// --index prints the index instead of the report, so a reader on one area reads only its rows.
+const PRINT_INDEX = args.includes("--index");
 const ROOT = resolve(flag("root") ?? process.cwd());
 const LEDGER = resolve(
-  args.find((a, i) => !a.startsWith("--") && !(ruleAt >= 0 && i === ruleAt + 1)) ??
-    join(ROOT, "specs/BUSINESS-RULES.md"),
+  args.find(
+    (a, i) => !a.startsWith("--") && !(ruleAt >= 0 && i === ruleAt + 1) && i !== areaNext,
+  ) ?? join(ROOT, "specs/BUSINESS-RULES.md"),
 );
 const SELF = resolve(process.argv[1] ?? "");
 const RESULTS = flag("results");
@@ -347,7 +360,7 @@ function readRegistry(lines: string[]): Area[] {
     // A file may be written plainly, in backticks, or as a link: [rules/billing.md](rules/billing.md).
     const raw = col("file").replace(/^\[[^\]]*\]\(([^)]*)\)$/, "$1").replace(/`/g, "").trim();
     const file = raw && !/^[—–-]$/.test(raw) ? resolve(dirname(LEDGER), raw) : null;
-    areas.push({ letter, name: col("area"), file, owner: col("owner") });
+    areas.push({ letter, name: col("area"), file, owner: col("owner").replace(/^[—–-]$/, "") });
   }
   return areas;
 }
@@ -648,6 +661,36 @@ function renderIndex(rules: Rule[], enforcement: (r: Rule) => string): string[] 
   return [line(head), `| ${head.map(() => "---").join(" | ")} |`, ...rows.map(line)];
 }
 
+// --area: the letters a value names. A letter, an area's name or an area file's path, comma-separated.
+function areaLetters(spec: string, areas: Area[], rules: Rule[]): Set<string> {
+  const known = new Map(areas.map((a) => [a.letter, a.name]));
+  for (const r of rules) if (r.id[3] !== "M" && !known.has(r.id[3])) known.set(r.id[3], "");
+  const out = new Set<string>();
+  for (const value of spec.split(",").map((v) => v.trim()).filter(Boolean)) {
+    const found = [
+      ...(known.has(value.toUpperCase()) ? [value.toUpperCase()] : []),
+      ...areas.filter((a) => a.name.toLowerCase() === value.toLowerCase()).map((a) => a.letter),
+      ...areas
+        .filter((a) => a.file && [resolve(ROOT, value), resolve(value)].includes(a.file))
+        .map((a) => a.letter),
+    ];
+    if (!found.length) {
+      const names = [...known].map(([l, n]) => (n ? `${l} ${n}` : l)).join(", ");
+      console.error(`--area: no area "${value}". Areas: ${names || "none"}.`);
+      process.exit(2);
+    }
+    for (const l of found) out.add(l);
+  }
+  return out;
+}
+
+// What a report line is about: a rule's area letter, "intent", or null for the whole ledger.
+// Rule messages start with the ID (br-B02:, or B02.1 for a test missing its prefix).
+function aboutArea(message: string): string | null {
+  if (/^in-\d/.test(message)) return "intent";
+  return message.match(/^(?:br-)?([A-Z])\d{2}\b/)?.[1] ?? null;
+}
+
 // Markdown beside the ledger: specs, briefs, notes. A spec names the intents it serves and cites
 // rules for its decisions (br-M30), so an ID that matches nothing is a broken link, and a spec
 // that names no intent is not yet tied to the ledger.
@@ -732,7 +775,13 @@ function main() {
     else seen.set(r.id, r);
   }
 
-  if (args.some((a) => a === "--tag" || a.startsWith("--tag="))) listTags(rules, intents);
+  // --area narrows what the report shows. Every rule is still read and checked, and the index
+  // stays whole, because rules serve shared intents and depend on rules in other areas.
+  const AREA = AREA_ARG ? areaLetters(AREA_ARG, areas, rules) : null;
+  const inArea = (id: string) => !AREA || AREA.has(id[3]);
+
+  if (args.some((a) => a === "--tag" || a.startsWith("--tag=")))
+    listTags(rules.filter((r) => inArea(r.id)), intents);
   const ruleIds = new Set(rules.map((r) => r.id));
   const intentIds = new Set(intents.map((i) => i.id));
 
@@ -951,10 +1000,45 @@ function main() {
     process.exit(0);
   }
 
+  if (LIST_AREAS) {
+    const live = rules.filter((r) => !r.id.startsWith("br-M") && r.fields.status !== "retired");
+    const letters = [...new Set([...areas.map((a) => a.letter), ...live.map((r) => r.id[3])])];
+    const rows = [["", "Area", "File", "Owner", "Rules", "Settled", "Passing", "Waiting"]];
+    for (const l of letters) {
+      const a = areas.find((x) => x.letter === l);
+      const mine = live.filter((r) => r.id[3] === l);
+      const settled = mine.filter((r) => r.fields.status === "settled");
+      rows.push([
+        l,
+        a?.name || "(not in the registry)",
+        a ? where(a.file) : "—",
+        a?.owner || "—",
+        String(mine.length),
+        String(settled.length),
+        String(settled.filter((r) => cellFor(r).startsWith("passing")).length),
+        String(mine.filter((r) => r.fields.status === "observed" || r.fields.status === "open").length),
+      ]);
+    }
+    const width = rows[0].map((_, c) => Math.max(...rows.map((r) => r[c].length)));
+    const out = rows.map((r) =>
+      r.map((v, c) => (c >= 4 ? v.padStart(width[c]) : v.padEnd(width[c]))).join("  ").trimEnd(),
+    );
+    const count = (n: number, k: string) => `${n} ${k}${n === 1 ? "" : "s"}`;
+    if (errors.length || warnings.length)
+      out.push("", `The ledger has ${count(errors.length, "error")} and ${count(warnings.length, "warning")}. Run without --area for the details.`);
+    console.log(out.join("\n"));
+    process.exit(0);
+  }
+
   const generated = renderIndex(
     rules.filter((r) => !r.id.startsWith("br-M")),
     cellFor,
   );
+  if (PRINT_INDEX) {
+    const rows = generated.slice(2).filter((row) => inArea(cells(row)[0]));
+    console.log([...generated.slice(0, 2), ...rows].join("\n"));
+    process.exit(0);
+  }
   const current = tableAt ? lines.slice(tableAt[0], tableAt[1]) : [];
   const sameTable =
     current.length === generated.length &&
@@ -986,9 +1070,10 @@ function main() {
     changed = true;
   }
 
-  const active = rules.filter(
+  const allActive = rules.filter(
     (r) => !r.id.startsWith("br-M") && r.fields.status !== "retired",
   );
+  const active = allActive.filter((r) => inArea(r.id));
   // Attended marks risk (br-M19). When most rules carry it, an agent can do little alone.
   const attendedCount = active.filter((r) => r.fields.attended).length;
   if (active.length >= 6 && attendedCount * 3 > active.length)
@@ -996,7 +1081,7 @@ function main() {
       `${attendedCount} of ${active.length} active rules are attended (over a third). Keep attended for money, deletion, security and customer data (br-M19).`,
     );
   // One file stays readable to about 150 rules. Past that, an agent reads more than the work needs.
-  const inMaster = active.filter((r) => r.file === LEDGER).length;
+  const inMaster = allActive.filter((r) => r.file === LEDGER).length;
   if (inMaster > 150)
     warnings.push(
       `${inMaster} active rules in the master. Move areas into area files (see the registry's File column) so a reader loads only the areas the work touches.`,
@@ -1009,17 +1094,25 @@ function main() {
     ]),
   );
   const byStatus = Object.fromEntries(
-    STATUSES.map((s) => [s, rules.filter((r) => r.fields.status === s).length]),
+    STATUSES.map((s) => [s, rules.filter((r) => inArea(r.id) && r.fields.status === s).length]),
   );
 
   const out: string[] = [];
   out.push(
     `Ledger: ${relative(ROOT, LEDGER)}${areaFiles.length ? ` and ${areaFiles.length} area file${areaFiles.length === 1 ? "" : "s"}: ${areaFiles.map((f) => relative(ROOT, f)).join(", ")}` : ""}`,
   );
+  for (const l of AREA ?? []) {
+    const a = areas.find((x) => x.letter === l);
+    out.push(
+      a
+        ? `Area: ${l} ${a.name}, in ${where(a.file)}${a.owner ? `, owner ${a.owner}` : ""}.`
+        : `Area: ${l}, not in the registry.`,
+    );
+  }
   out.push(
     `Rules: ${active.length} active (${STATUSES.filter((s) => s !== "retired")
       .map((s) => `${byStatus[s]} ${s}`)
-      .join(", ")}), ${byStatus.retired} retired. Intents: ${intents.length}${intentSummary(intents)}.`,
+      .join(", ")}), ${byStatus.retired} retired.${AREA ? "" : ` Intents: ${intents.length}${intentSummary(intents)}.`}`,
   );
   out.push(
     `Settled enforcement: ${LEVELS.map((l) => `${counts[l]} ${l}`).join(", ")}.${passed ? "" : " (no --results given)"}`,
@@ -1030,7 +1123,9 @@ function main() {
     out.push(
       "Passing means the named tests passed, not that they check the rule. Review the tests of attended rules.",
     );
-  const mentionCount = [...mentions.values()].reduce((n, w) => n + w.length, 0);
+  const mentionCount = [...mentions]
+    .filter(([bare]) => inArea(`br-${bare}`))
+    .reduce((n, [, w]) => n + w.length, 0);
   if (mentionCount > 0)
     out.push(
       `${mentionCount} rule mention(s) in code not counted as citations (no colon or @see).`,
@@ -1061,7 +1156,7 @@ function main() {
 
   // Observed and open entries close only when the owner answers; nothing else forces them to.
   const waiting = [
-    ...intents.filter((i) => i.fields.status === "observed"),
+    ...(AREA ? [] : intents.filter((i) => i.fields.status === "observed")),
     ...active.filter((r) => r.fields.status === "observed" || r.fields.status === "open"),
   ];
   if (waiting.length) {
@@ -1078,7 +1173,7 @@ function main() {
       return `since ${d}, ${days} day${days === 1 ? "" : "s"}`;
     };
     const kinds = [
-      [intents.filter((i) => i.fields.status === "observed").length, "observed intent"],
+      [AREA ? 0 : intents.filter((i) => i.fields.status === "observed").length, "observed intent"],
       [active.filter((r) => r.fields.status === "observed").length, "observed rule"],
       [active.filter((r) => r.fields.status === "open").length, "open rule"],
     ] as const;
@@ -1107,20 +1202,36 @@ function main() {
     out.push("", "Known gaps:");
     for (const r of gaps) out.push(`  ${r.id}  ${r.fields.gap}`);
   }
-  if (errors.length)
-    out.push("", `Errors (${errors.length}):`, ...errors.map((e) => `  ${e}`));
-  if (warnings.length)
+  // With --area, messages about other areas' rules and about intents are counted, not shown.
+  const shows = (m: string) => {
+    const about = aboutArea(m);
+    return !AREA || about === null || AREA.has(about);
+  };
+  const shownErrors = errors.filter(shows);
+  const shownWarnings = warnings.filter(shows);
+  if (shownErrors.length)
+    out.push("", `Errors (${shownErrors.length}):`, ...shownErrors.map((e) => `  ${e}`));
+  if (shownWarnings.length)
     out.push(
       "",
-      `Warnings (${warnings.length}):`,
-      ...warnings.map((w) => `  ${w}`),
+      `Warnings (${shownWarnings.length}):`,
+      ...shownWarnings.map((w) => `  ${w}`),
+    );
+  const hidden = [
+    [errors.length - shownErrors.length, "error"],
+    [warnings.length - shownWarnings.length, "warning"],
+  ].filter(([n]) => n) as [number, string][];
+  if (hidden.length)
+    out.push(
+      "",
+      `Elsewhere in the ledger: ${hidden.map(([n, k]) => `${n} ${k}${n === 1 ? "" : "s"}`).join(", ")}. Run without --area for the details.`,
     );
   if (WRITE && idx)
     out.push("", changed ? "Index rebuilt from the rule entries." : "Index already up to date.");
 
   console.log(out.join("\n"));
 
-  let exit = errors.length ? 1 : 0;
+  let exit = shownErrors.length ? 1 : 0;
   if (stale.length) {
     console.log(
       `\nIndex out of date (${stale.length}). It is generated; run with --write locally and commit:\n${stale.map((s) => `  ${s}`).join("\n")}`,
