@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 /**
  * Checks a business rules ledger against the codebase, lints it, and computes each rule's enforcement.
- * Version 2.9.0 — ships with the business-rules-ledger skill. Reinstall from the skill to update.
+ * Version 2.9.1 — ships with the business-rules-ledger skill. Reinstall from the skill to update.
  *
  * Usage:
  *   npx tsx scripts/ledger-check.ts                         report only
@@ -14,8 +14,8 @@
  *   npx tsx scripts/ledger-check.ts --waiting               list everything waiting on the owner, not only the oldest 10
  *   npx tsx scripts/ledger-check.ts --tag                   list every tag with how many rules and intents carry it
  *   npx tsx scripts/ledger-check.ts --tag=boilerplate       list the rules and intents carrying that tag
- *   npx tsx scripts/ledger-check.ts --rule=br-B02           one rule: its entry, enforcement, citations and tests
- *                                                            (--rule br-B02 and --rule B02 work too)
+ *   npx tsx scripts/ledger-check.ts --rule=br-C01           one rule: its entry, enforcement, citations and tests
+ *                                                            (--rule br-C01 and --rule C01 work too)
  *   npx tsx scripts/ledger-check.ts --area                  list the areas: file, owner, rules, settled, passing, waiting
  *   npx tsx scripts/ledger-check.ts --area=B                the report for one area (or B,U; a name; an area file).
  *                                                            Works with --waiting and --require; the index stays whole.
@@ -24,6 +24,12 @@
  *
  * The ledger is the master. When its registry names a file for an area, that area's rules live in
  * that file (an area file) and the checker reads it too. The one index stays in the master.
+ *
+ * Two optional lines under the master's Format: line say what code is read. Paths are relative to
+ * the repo root and comma-separated.
+ *   Ignore: examples/                    never read these, such as examples with their own ledgers
+ *   Scan: business-rules-ledger/assets/  read these although they are skipped by default
+ *                                        (copies of this checker, dist/, build/ and the like)
  *
  * Without --results, a rule already marked passing stays passing while its tests still exist.
  */
@@ -35,7 +41,7 @@ import {
   statSync,
   existsSync,
 } from "fs";
-import { join, relative, resolve, extname, dirname } from "path";
+import { join, relative, resolve, extname, dirname, sep } from "path";
 
 const LEVELS = ["none", "cited", "tested", "passing"] as const;
 type Level = (typeof LEVELS)[number];
@@ -106,7 +112,7 @@ const flag = (name: string) => {
   const a = args.find((x) => x.startsWith(`--${name}=`));
   return a ? a.slice(name.length + 3) : undefined;
 };
-// --rule also takes its ID as the next argument, so `npm run rule br-B02` works.
+// --rule also takes its ID as the next argument, so `npm run rule br-C01` works.
 const ruleAt = args.indexOf("--rule");
 const ruleArg = ruleAt >= 0 ? args[ruleAt + 1] : undefined;
 // --area too: --area B, --area=B,U, --area=Business or --area=specs/rules/business.md.
@@ -129,7 +135,7 @@ const REQUIRE = flag("require") as Level | undefined;
 const WRITE = args.includes("--write");
 const VERIFY = args.includes("--verify");
 const ALL_WAITING = args.includes("--waiting");
-// --rule=br-B02 (or B02) prints one rule instead of the report.
+// --rule=br-C01 (or C01) prints one rule instead of the report.
 const ONE_RULE = (flag("rule") ?? ruleArg)?.toUpperCase().replace(/^(BR-)?/, "br-");
 // How many waiting entries the report shows before "and N more".
 const WAITING_SHOWN = 10;
@@ -138,7 +144,7 @@ const WAITING_SHOWN = 10;
 const NOT_A_SPEC = /<!--\s*ledger:\s*not a spec\s*-->/i;
 
 if (ruleAt >= 0 && !ruleArg) {
-  console.error("--rule needs a rule ID: --rule br-B02");
+  console.error("--rule needs a rule ID: --rule br-C01");
   process.exit(2);
 }
 if (REQUIRE && !LEVELS.includes(REQUIRE)) {
@@ -371,21 +377,45 @@ const rowKey = (row: string) =>
     .map((c) => (/^:?-+:?$/.test(c) ? "---" : c))
     .join("|");
 
-function walk(dir: string, out: string[]) {
+// The master's Ignore: and Scan: lines, as absolute paths. Ignore wins where both apply.
+let IGNORE: string[] = [];
+let SCAN: string[] = [];
+const within = (p: string, dirs: string[]) => dirs.some((d) => p === d || p.startsWith(d + sep));
+
+// Code files under dir. Copies of this checker are skipped, so its own text never counts as a
+// citation; Scan: reads them anyway, for a repo whose product is the checker. Inside a skipped
+// directory that only leads to a Scan: path, only that path is read (onlyScan).
+function walk(dir: string, out: string[], onlyScan = false) {
   for (const name of readdirSync(dir)) {
-    if (SKIP_DIRS.has(name)) continue;
     const p = join(dir, name);
-    const s = statSync(p);
-    if (s.isDirectory()) walk(p, out);
-    else if (
+    if (within(p, IGNORE)) continue;
+    const scanned = within(p, SCAN);
+    const leadsToScan = SCAN.some((d) => d.startsWith(p + sep));
+    if (SKIP_DIRS.has(name) && !scanned && !leadsToScan) continue;
+    if (statSync(p).isDirectory()) {
+      if (SKIP_DIRS.has(name) && !scanned) walk(p, out, true);
+      else walk(p, out, onlyScan && !scanned);
+    } else if (
       CODE_EXT.has(extname(name)) &&
       p !== LEDGER &&
-      p !== SELF &&
-      name !== "ledger-check.ts"
+      (!onlyScan || scanned) &&
+      (scanned || (p !== SELF && name !== "ledger-check.ts"))
     )
       out.push(p);
   }
   return out;
+}
+
+// A header setting: "Ignore: examples/, vendor/" → absolute paths. A path that does not exist
+// is a warning, since a typo would otherwise widen or narrow the scan silently.
+function setting(header: string[], name: string): string[] {
+  const values = header
+    .flatMap((l) => l.match(new RegExp(`^${name}:\\s*(.*)$`))?.[1].split(",") ?? [])
+    .map((v) => v.replace(/`/g, "").trim().replace(/[\\/]+$/, ""))
+    .filter(Boolean);
+  for (const v of values)
+    if (!existsSync(resolve(ROOT, v))) warnings.push(`${name}: ${v} does not exist.`);
+  return values.map((v) => resolve(ROOT, v));
 }
 
 // Spans of single-line string literals, so a test ID counts only when it is part of a test name.
@@ -685,7 +715,7 @@ function areaLetters(spec: string, areas: Area[], rules: Rule[]): Set<string> {
 }
 
 // What a report line is about: a rule's area letter, "intent", or null for the whole ledger.
-// Rule messages start with the ID (br-B02:, or B02.1 for a test missing its prefix).
+// Rule messages start with the rule ID, or with a bare test ID when its br- prefix is missing.
 function aboutArea(message: string): string | null {
   if (/^in-\d/.test(message)) return "intent";
   return message.match(/^(?:br-)?([A-Z])\d{2}\b/)?.[1] ?? null;
@@ -699,8 +729,8 @@ function checkDocs(ruleIds: Set<string>, intentIds: Set<string>, areaFiles: stri
   const docs: string[] = [];
   const find = (dir: string) => {
     for (const name of readdirSync(dir)) {
-      if (SKIP_DIRS.has(name)) continue;
       const p = join(dir, name);
+      if (SKIP_DIRS.has(name) || within(p, IGNORE)) continue;
       if (statSync(p).isDirectory()) find(p);
       else if (extname(name).toLowerCase() === ".md" && !skip.has(p)) docs.push(p);
     }
@@ -735,6 +765,10 @@ function main() {
   const content = readFileSync(LEDGER, "utf8");
   const lines = content.split("\n");
   const master = parseLedger(content, LEDGER);
+  const firstSection = lines.findIndex((l) => /^## /.test(l));
+  const header = lines.slice(0, firstSection < 0 ? lines.length : firstSection);
+  IGNORE = setting(header, "Ignore");
+  SCAN = setting(header, "Scan");
   const rules = [...master.rules];
   const intents = [...master.intents];
 
@@ -1101,6 +1135,13 @@ function main() {
   out.push(
     `Ledger: ${relative(ROOT, LEDGER)}${areaFiles.length ? ` and ${areaFiles.length} area file${areaFiles.length === 1 ? "" : "s"}: ${areaFiles.map((f) => relative(ROOT, f)).join(", ")}` : ""}`,
   );
+  const shown = (paths: string[]) => paths.map((p) => relative(ROOT, p) || ".").join(", ");
+  if (IGNORE.length || SCAN.length)
+    out.push(
+      [IGNORE.length && `Ignored: ${shown(IGNORE)}.`, SCAN.length && `Scanned although skipped by default: ${shown(SCAN)}.`]
+        .filter(Boolean)
+        .join(" "),
+    );
   for (const l of AREA ?? []) {
     const a = areas.find((x) => x.letter === l);
     out.push(
