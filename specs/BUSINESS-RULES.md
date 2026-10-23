@@ -25,11 +25,12 @@ A developer can see how far the code enforces each rule, computed from the code 
 for: developers and agents building against a ledger
 broken when: the index shows a rule as passing while one of its named tests is missing or failed.
 non-goal: proving that a test checks its rule. Passing means the named tests exist and passed.
-status: observed
+status: settled
 
 **Source**
 
 - 2026-10-22, observed: README.md "The bit that makes it stick" and SKILL.md _Enforcement_. Drafted from the docs; not confirmed.
+- 2026-10-23, intent review. Confirmed by the owner.
 
 ### in-02
 
@@ -40,11 +41,12 @@ A reader can trust the index as a summary of the ledger without opening every en
 for: anyone who scans the index to find the rules a task touches
 broken when: a rule's statement changes, the index still shows the old one, and CI passes.
 non-goal: CI rewriting the index. CI verifies; the index is rebuilt locally and committed.
-status: observed
+status: settled
 
 **Source**
 
 - 2026-10-22, observed: SKILL.md _The index_ and br-M29. Drafted from the docs; not confirmed.
+- 2026-10-23, intent review. Confirmed by the owner.
 
 ### in-03
 
@@ -55,11 +57,12 @@ An owner sees what waits on their decision, oldest first, without reading the le
 for: the product owner, or an area's owner
 broken when: an observed rule waits weeks for confirmation and the report never mentions it.
 non-goal: reminders or notifications outside the report.
-status: observed
+status: settled
 
 **Source**
 
 - 2026-10-22, observed: SKILL.md _Open rules_ and the 2.7.0 changelog ("nothing waits silently"). Drafted from the docs; not confirmed.
+- 2026-10-23, intent review. Confirmed by the owner.
 
 ### in-04
 
@@ -70,11 +73,12 @@ A ledger author hears about a malformed or dangling entry before anyone relies o
 for: people and agents writing rules
 broken when: a rule serves an intent that does not exist, and the checker says nothing.
 non-goal: judging whether a rule is right. Meaning is for review mode, not the checker.
-status: observed
+status: settled
 
 **Source**
 
 - 2026-10-22, observed: SKILL.md _Enforcement_ ("lints the ledger") and _Review mode_. Drafted from the docs; not confirmed.
+- 2026-10-23, intent review. Confirmed by the owner.
 
 ### in-05
 
@@ -84,11 +88,13 @@ A reader working on one rule or one area reads only that, however large the ledg
 
 for: developers and agents on a large ledger
 broken when: answering "where is br-C01 enforced?" means loading the whole ledger and every area file.
-status: observed
+non-goal: a database or server. The ledger stays plain Markdown in the repo, read with grep and changed in a pull request.
+status: settled
 
 **Source**
 
 - 2026-10-22, observed: SKILL.md _Area files_ and the 2.8.0 and 2.9.0 changelogs. Drafted from the docs; not confirmed.
+- 2026-10-23, intent review. Confirmed by the owner. Non-goal added: a store other than Markdown would lose grep, diff and review.
 
 ### in-06
 
