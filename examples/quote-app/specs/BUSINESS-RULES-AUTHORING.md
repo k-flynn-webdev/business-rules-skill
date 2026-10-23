@@ -1,7 +1,7 @@
 # Business rules ledger — reading, citing and authoring
 
 How to read the business rules ledger in this folder, cite it in code, and write or amend it.
-Format: business-rules-ledger 2.9.0
+Format: business-rules-ledger 2.9.1
 
 Everything a ledger has in common lives here, so the ledger itself holds only its own intents,
 rules and index. Read _How to read the ledger_ to read it, _Citing rules in code_ to cite it, and
@@ -20,6 +20,7 @@ edit them per project.
 - A rule's tests are the rows of its examples table, by the ID in the first column, and the numbered lines under **Tests**.
 - `> Fails if` is the condition that proves a rule broken. `gap:` records where the code does not conform yet.
 - The index is built from the rule entries by `scripts/ledger-check.ts`, which also computes enforcement. Never edit it by hand.
+- Under `Format:`, an `Ignore:` line names paths the checker never reads, and a `Scan:` line paths it reads although it skips them by default.
 - A large ledger keeps some areas in area files. The registry in the ledger names each area's file and owner; the index in the ledger lists every rule, wherever it lives. To read one area's rows only: `ledger-check.ts --index --area=B`.
 - A rule's history is in its **Source** lines. The ledger keeps no change log; git does.
 - Specs and other documents may describe an area, but decisions live in the ledger. When they disagree with the ledger, the ledger wins.
