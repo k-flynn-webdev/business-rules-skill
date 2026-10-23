@@ -107,7 +107,8 @@ A checker greps your codebase and works out, for each rule, how far it actually 
 
 You never write the index by hand — the checker builds it from the rules and computes that column. Run it in
 CI with `--verify` and the build fails when the index is stale. Run it with `--require=tested`
-and the build fails when a settled rule has no test.
+and the build fails when a settled rule has no test. A known `gap:` does not lower the level, so
+`passing, gap` still meets `--require=passing`; the checker warns about it instead.
 
 That's the difference in one sentence: **a spec tells you what someone once intended; a ledger
 tells you which of those intentions the code is currently keeping.**

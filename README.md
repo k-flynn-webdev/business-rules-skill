@@ -336,6 +336,10 @@ It reads Jest and Vitest JSON, TRX (`dotnet test --logger trx`) and JUnit XML (p
 gotestsum), so it works across a TypeScript front end and a .NET or Python back end in one repo.
 In CI, run the tests with a results file and then `--verify --require=tested`.
 
+`--require` counts the enforcement level and nothing else. **A rule with a `gap:` still meets it**:
+`passing, gap` meets `--require=passing`. The gap stays in the report under _Known gaps_, and the
+checker warns when a rule passes with one, because either the gap is stale or the tests miss it.
+
 ## The examples
 
 [`examples/journal-app`](examples/journal-app) is the quickest way to see it working. It is the

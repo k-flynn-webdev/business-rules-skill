@@ -150,9 +150,9 @@ Every rule, in this document or an area file. Built by `business-rules-ledger/as
 | br-C11 | The index has one row per rule except the authoring rules, retired rules included: the master's rules first, then each area file's in registry order. Every cell but Enforcement comes from the rule's entry. | in-02 | `index` | observed | none |
 | br-C12 | When the checker runs with --verify and the index's cells differ from what --write would build, then it exits 1 and names each row that differs. Spacing and padding do not count as differences. | in-02 | `index` `ci` | observed | none |
 | br-C13 | When the checker runs with --write and the index differs, then it rewrites the index table and leaves every other line of the master unchanged. | in-02 | `index` | observed | none |
-| br-C14 | When the checker runs with --require at a level, then it exits 1 if any settled rule's enforcement is below that level. | in-01 | `enforcement` `ci` | observed | none |
+| br-C14 | When the checker runs with --require at a level, then it exits 1 if any settled rule's enforcement is below that level. | in-01 | `enforcement` `ci` | settled | none |
 | br-C15 | When the ledger has waiting entries, then the report lists them oldest first: an observed entry dated by its oldest source line, an open rule by its newest. It shows the 10 oldest unless --waiting is given. | in-03 | `waiting` | observed | none |
-| br-C16 | Scanned code is every file under the repo root with a code extension, except in dependency and build folders, the ledger itself, and any file named ledger-check.ts. | in-01 in-06 | `scan` | observed | none |
+| br-C16 | Scanned code is every file under the repo root with a code extension, shell scripts included, except in dependency and build folders, the ledger itself, and any file named ledger-check.ts. | in-01 in-06 | `scan` | settled | none |
 | br-C17 | When the master's header has an `Ignore:` line, then the checker reads no code and no document under those paths, even where `Scan:` names them. | in-06 | `scan` | settled | none |
 | br-C18 | When the master's header has a `Scan:` line, then the checker also reads code under those paths that it skips by default. Inside a skipped folder, only the named paths are read. | in-06 | `scan` | settled | none |
 | br-C19 | When a path in an `Ignore:` or `Scan:` line does not exist, then the checker warns and names it. | in-06 | `scan` | settled | none |
@@ -173,6 +173,7 @@ Every rule, in this document or an area file. Built by `business-rules-ledger/as
 | br-L12 | When more than 150 active rules sit in the master, then the checker warns that areas should move to area files. | in-05 | `lint` `area` `scale` | observed | none |
 | br-L13 | When an intent has no statement, the checker reports an error. When it has no `broken when:` line, or no rule serves it, the checker warns. | in-04 | `lint` `intents` | observed | none |
 | br-L14 | When a document beside the ledger names a rule or intent that does not exist, then the checker warns on that line. Documents that name no intent share one warning, unless marked `<!-- ledger: not a spec -->`. | in-04 | `lint` `docs` | observed | none |
+| br-L15 | When a rule with a gap is open or settled and every one of its tests passed in the results, then the checker warns. | in-01 in-04 | `lint` `enforcement` | settled | cited |
 
 ---
 
@@ -484,7 +485,7 @@ When the checker runs with --write and the index differs, then it rewrites the i
 
 ## br-C14
 
-kind: behaviour | serves: in-01 | given: br-C03 | status: observed
+kind: behaviour | serves: in-01 | given: br-C03 | status: settled
 
 When the checker runs with --require at a level, then it exits 1 if any settled rule's enforcement is below that level.
 
@@ -501,6 +502,7 @@ When the checker runs with --require at a level, then it exits 1 if any settled 
 **Source**
 
 - 2026-10-22, observed: `ledger-check.ts` main(), REQUIRE. suspect: a rule with a gap counts at its level, so `passing, gap` meets --require=passing.
+- 2026-10-23, intent review. Intended: --require counts the level, and a gap does not lower it. The gap stays visible under Known gaps, and br-L15 warns when a rule passes with one. The README says so where it explains --require.
 
 ---
 
@@ -535,9 +537,9 @@ When the ledger has waiting entries, then the report lists them oldest first: an
 
 ## br-C16
 
-kind: definition | serves: in-01, in-06 | status: observed
+kind: definition | serves: in-01, in-06 | status: settled
 
-Scanned code is every file under the repo root with a code extension, except in dependency and build folders, the ledger itself, and any file named ledger-check.ts.
+Scanned code is every file under the repo root with a code extension, shell scripts included, except in dependency and build folders, the ledger itself, and any file named ledger-check.ts.
 
 `#scan`
 
@@ -545,13 +547,15 @@ Scanned code is every file under the repo root with a code extension, except in 
 
 - C16.1 — Given a citation in node_modules/x/index.ts. When the checker runs. Then the citation is not counted.
 - C16.2 — Given a citation in tools/ledger-check.ts. When the checker runs. Then the citation is not counted.
-- C16.3 — Given a citation in scripts/build.sh. When the checker runs. Then the citation is not counted.
+- C16.3 — Given a citation in scripts/build.sh. When the checker runs. Then the citation is counted.
+- C16.4 — Given a citation in .github/workflows/ci.yml. When the checker runs. Then the citation is not counted.
 
 > Fails if a file outside that set is read, or a code file inside it is not.
 
 **Source**
 
 - 2026-10-22, observed: `ledger-check.ts` walk(), CODE_EXT and SKIP_DIRS. Copies of the checker are skipped so its own text never counts as a citation. suspect: shell scripts, YAML, HTML, CSS, C and C++ are not read, so this repo's `scripts/check.sh` cannot cite a rule. suspect: the folder list is fixed in code.
+- 2026-10-23, intent review. Partly an accident: shell scripts can hold business logic, so .sh and .bash are now read. YAML stays out, because a quoted CI step name would count as a test name. The fixed folder list is answered by Ignore: and Scan: (br-C17, br-C18).
 
 ---
 
@@ -991,3 +995,25 @@ When a document beside the ledger names a rule or intent that does not exist, th
 **Source**
 
 - 2026-10-22, observed: `ledger-check.ts` checkDocs(). Implements br-M30. Built in 2.7.0, one warning since 2.7.1.
+
+---
+
+## br-L15
+
+kind: behaviour | serves: in-01, in-04 | given: br-C03 | status: settled
+
+When a rule with a gap is open or settled and every one of its tests passed in the results, then the checker warns.
+
+`#lint` `#enforcement`
+
+**Tests**
+
+- L15.1 — Given a settled rule with a gap: line whose tests all passed in the results. When the checker runs. Then it warns that the gap is stale or the tests miss it.
+- L15.2 — Given a settled rule with a gap: line at tested, with no results file. When the checker runs. Then it does not warn.
+- L15.3 — Given a settled rule with no gap whose tests all passed. When the checker runs. Then it does not warn.
+
+> Fails if a rule passes with a gap and nothing is said, or a rule without a passing result is warned.
+
+**Source**
+
+- 2026-10-23, intent review of br-C14. A gap says the code breaks the rule, so tests that all pass contradict it: either the gap is stale or the tests do not cover it. --require still counts the level (br-C14), so this is a warning, not a failure.

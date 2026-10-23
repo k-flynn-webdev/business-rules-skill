@@ -87,6 +87,8 @@ const CODE_EXT = new Set([
   ".ex",
   ".exs",
   ".sql",
+  ".sh",
+  ".bash",
 ]);
 const SKIP_DIRS = new Set([
   "node_modules",
@@ -950,6 +952,11 @@ function main() {
     else if (citations.has(bare)) level = "cited";
     if (allTested && !citations.has(bare) && !retired)
       warnings.push(`${r.id}: tested, but no code cites it.`);
+    // br-L15: a gap says the code breaks the rule, so tests that all pass contradict it.
+    if (level === "passing" && f.gap && status !== "observed")
+      warnings.push(
+        `${r.id}: passing with a gap. Either the code now conforms (delete the gap) or the tests miss it.`,
+      );
     levels.set(r.id, level);
 
     for (const t of r.tags)
