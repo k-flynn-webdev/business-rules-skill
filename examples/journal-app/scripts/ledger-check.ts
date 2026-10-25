@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 /**
  * Checks a business rules ledger against the codebase, lints it, and computes each rule's enforcement.
- * Version 2.9.1 — ships with the business-rules-ledger skill. Reinstall from the skill to update.
+ * Version 2.9.2 — ships with the business-rules-ledger skill. Reinstall from the skill to update.
  *
  * Usage:
  *   npx tsx scripts/ledger-check.ts                         report only
@@ -87,6 +87,8 @@ const CODE_EXT = new Set([
   ".ex",
   ".exs",
   ".sql",
+  ".sh",
+  ".bash",
 ]);
 const SKIP_DIRS = new Set([
   "node_modules",
@@ -950,6 +952,11 @@ function main() {
     else if (citations.has(bare)) level = "cited";
     if (allTested && !citations.has(bare) && !retired)
       warnings.push(`${r.id}: tested, but no code cites it.`);
+    // br-L15: a gap says the code breaks the rule, so tests that all pass contradict it.
+    if (level === "passing" && f.gap && status !== "observed")
+      warnings.push(
+        `${r.id}: passing with a gap. Either the code now conforms (delete the gap) or the tests miss it.`,
+      );
     levels.set(r.id, level);
 
     for (const t of r.tags)
@@ -1109,6 +1116,7 @@ function main() {
   );
   const active = allActive.filter((r) => inArea(r.id));
   // Attended marks risk (br-M19). When most rules carry it, an agent can do little alone.
+  // br-L10: from 6 rules. Below that a third is one or two, and a new ledger would warn at once.
   const attendedCount = active.filter((r) => r.fields.attended).length;
   if (active.length >= 6 && attendedCount * 3 > active.length)
     warnings.push(
