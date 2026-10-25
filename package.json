@@ -1,0 +1,19 @@
+{
+    "name": "business-rules-skill",
+    "private": true,
+    "description": "The skill's own tests: the checker, run against small fixture repos, one test per ledger test ID.",
+    "type": "module",
+    "scripts": {
+        "test": "vitest run",
+        "test:results": "vitest run --reporter=json --outputFile=test-results.json",
+        "ledger": "npm run test:results; tsx business-rules-ledger/assets/ledger-check.ts --results=test-results.json --write",
+        "ledger:verify": "npm run test:results && tsx business-rules-ledger/assets/ledger-check.ts --results=test-results.json --verify --require=passing",
+        "rule": "tsx business-rules-ledger/assets/ledger-check.ts --rule",
+        "area": "tsx business-rules-ledger/assets/ledger-check.ts --area"
+    },
+    "devDependencies": {
+        "@types/node": "26.6.2",
+        "tsx": "4.23.15",
+        "vitest": "5.0.1"
+    }
+}

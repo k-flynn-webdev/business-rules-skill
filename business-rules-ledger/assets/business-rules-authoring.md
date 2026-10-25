@@ -1,7 +1,7 @@
 # Business rules ledger — reading, citing and authoring
 
 How to read the business rules ledger in this folder, cite it in code, and write or amend it.
-Format: business-rules-ledger 2.9.2
+Format: business-rules-ledger 2.9.3
 
 Everything a ledger has in common lives here, so the ledger itself holds only its own intents,
 rules and index. Read _How to read the ledger_ to read it, _Citing rules in code_ to cite it, and

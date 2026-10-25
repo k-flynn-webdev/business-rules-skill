@@ -2,12 +2,12 @@
 name: "business-rules-ledger"
 description: Capture product intents, business rules and their tests in a business rules ledger — a living, grep-able source of truth that code and tests conform to, with each rule's enforcement computed from the code. Use whenever the user wants to write down a rule, decision, invariant or intent ("add a rule", "write this down", "how should this behave", "what's the rule for X"); describes what the system should or shouldn't do while working on tickets, bugs or features; asks for a spec, requirements or acceptance criteria; wants a ledger built from a codebase; or mentions a rules ledger, intents, br- IDs or rule-driven development. Also use for "grill me" or settling open rules; "intent review" or confirming observed rules; "fresh eyes" or reviewing the ledger; asking which rules are enforced, what's left, or to check the ledger against the code; and "read me the rules", "audio" or "listen". Prefer this over a prose spec.
 metadata:
-  version: "2.9.2"
+  version: "2.9.3"
 ---
 
 # Business Rules Ledger
 
-Version 2.9.2. See the changelog at the end.
+Version 2.9.3. See the changelog at the end.
 
 A ledger of intents and the numbered rules that serve them. An intent says what a user should be
 able to do and what would feel broken. A rule is one decision, stated in one or two sentences,
@@ -557,8 +557,8 @@ review mode read the tests of any `attended: required` rule against its Fails if
 - skips dependency and build folders and copies of itself. Two optional lines under the master's
   `Format:` line change what it reads, with paths relative to the repo root, comma-separated:
   `Ignore: examples/` reads nothing there, code or documents, for examples or packages with
-  ledgers of their own; `Scan: tools/checker/` reads code it would otherwise skip. Ignore wins
-  where both apply, and a path that does not exist is a warning. The report names both on its
+  ledgers of their own; `Scan: dist/shared/` reads code it would otherwise skip, and a copy of the
+  checker only when the line names its file. Ignore wins where both apply, and a path that does not exist is a warning. The report names both on its
   second line
 - reads test results when given `--results=` to decide `passing`: Jest or Vitest JSON, TRX
   (`dotnet test --logger trx`) or JUnit XML (pytest, Go via gotestsum, most CI tools). It takes
@@ -742,9 +742,9 @@ The document header states the format version. When opening a ledger with an old
 no version, say so and offer to upgrade it. Do not upgrade without asking. List the changes the
 upgrade would make before making them.
 
-Upgrading 2.x to 2.9.2 is mechanical; no rule changes:
+Upgrading 2.x to 2.9.3 is mechanical; no rule changes:
 
-1. Set `Format: business-rules-ledger 2.9.2`.
+1. Set `Format: business-rules-ledger 2.9.3`.
 2. Install `assets/business-rules-authoring.md` as `BUSINESS-RULES-AUTHORING.md` next to the ledger.
 3. Delete the `How to write rules (br-M)` section, and point the header line at
    `BUSINESS-RULES-AUTHORING.md` as the template does.
@@ -794,9 +794,9 @@ Upgrading 2.x to 2.9.2 is mechanical; no rule changes:
     checker reports errors for IDs in folders that hold other projects (examples, packages with
     ledgers of their own), offer an `Ignore:` line under `Format:` naming them.
 
-Upgrading 1.x to 2.9.2, in stages the user can stop between:
+Upgrading 1.x to 2.9.3, in stages the user can stop between:
 
-1. Set `Format: business-rules-ledger 2.9.2`. Do steps 2 to 4, 6 and 8 to 15 of the 2.x upgrade above.
+1. Set `Format: business-rules-ledger 2.9.3`. Do steps 2 to 4, 6 and 8 to 15 of the 2.x upgrade above.
 2. Add the Intents and Glossary sections. Draft intents from the existing rules and their
    sources, mark them `observed`, and confirm them with the user one at a time.
 3. Add `kind:` and `serves:` to every rule. Propose both; ask only where unclear.
@@ -902,7 +902,7 @@ Use this order exactly:
 
 Source of truth. Code and tests conform to this document.
 How to read it, cite it in code and write it: [`BUSINESS-RULES-AUTHORING.md`](BUSINESS-RULES-AUTHORING.md).
-Format: business-rules-ledger 2.9.2
+Format: business-rules-ledger 2.9.3
 Ignore: [paths the checker never reads — optional]
 Scan: [paths it reads although it skips them by default — optional]
 
@@ -1031,6 +1031,7 @@ is now true. Do not write the new one and leave both standing.
 
 ## Changelog
 
+- **2.9.3** — 2026-10-25 — `Scan:` reads a copy of the checker only when it names that file, not its folder, so a project that scans the folder holding its copy never counts the checker's own citations. Those citations are new: the checker now cites the skill's own rules where it enforces them, and its header says they belong to the skill's ledger, not yours. In the skill's repo, every rule of that ledger is tested by name and passing, and it has a lite spec. Format unchanged.
 - **2.9.2** — 2026-10-25 — The skill's own ledger is through intent review: every intent and rule is settled. Two answers change the checker. It reads shell scripts (`.sh`, `.bash`), which can hold business logic; YAML stays out, so a quoted CI step name never counts as a test name. And a rule with a `gap:` whose tests all passed gets a warning, since either the gap is stale or the tests miss it; `--require` still counts the level, so `passing, gap` meets `--require=passing`, which the READMEs now say. Format unchanged.
 - **2.9.1** — 2026-10-22 — The skill keeps a ledger of its own (`specs/BUSINESS-RULES.md` in its repo: the checker's and the linter's rules, observed and waiting for intent review). Building it showed that a repo with examples could not scope the scan, so the master gains two optional header lines: `Ignore:` (paths never read, code or documents) and `Scan:` (paths read although skipped by default, such as copies of the checker). Ignore wins where both apply; a path that does not exist is a warning; the report names both. The checker's usage text uses `br-C01` as its example. Format unchanged.
 - **2.9.0** — 2026-10-21 — Reports by area. `--area` lists the areas with each one's file, owner and counts of active, settled, passing and waiting rules. `--area=B` (also a name, an area file's path, or `B,U`) narrows the report to those areas: counts, rules not yet passing, waiting list, gaps, and their errors and warnings, with the rest counted under _Elsewhere in the ledger_. The exit code follows what is shown, so `--require` can gate one area; the whole ledger is still checked and the index stays whole. `--tag` respects `--area`. `--index` prints the index instead of the report, and `--index --area=B` only that area's rows, so an agent on a large ledger reads its slice. The audio script takes `--area=` and reads only those areas' rules and the intents they serve. The authoring file points readers at `--index --area`. A `—` owner reads as none. Format unchanged.

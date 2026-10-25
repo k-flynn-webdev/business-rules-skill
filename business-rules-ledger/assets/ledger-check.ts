@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 /**
  * Checks a business rules ledger against the codebase, lints it, and computes each rule's enforcement.
- * Version 2.9.2 — ships with the business-rules-ledger skill. Reinstall from the skill to update.
+ * Version 2.9.3 — ships with the business-rules-ledger skill. Reinstall from the skill to update.
  *
  * Usage:
  *   npx tsx scripts/ledger-check.ts                         report only
@@ -28,10 +28,14 @@
  * Two optional lines under the master's Format: line say what code is read. Paths are relative to
  * the repo root and comma-separated.
  *   Ignore: examples/                    never read these, such as examples with their own ledgers
- *   Scan: business-rules-ledger/assets/  read these although they are skipped by default
- *                                        (copies of this checker, dist/, build/ and the like)
+ *   Scan: dist/shared/                   read these although they are skipped by default
+ *                                        (dist/, build/ and the like). A copy of this checker is
+ *                                        read only when its file is named: Scan: tools/ledger-check.ts
  *
  * Without --results, a rule already marked passing stays passing while its tests still exist.
+ *
+ * The br-C and br-L citations in this file refer to the skill's own ledger, specs/BUSINESS-RULES.md
+ * in its repo. Your ledger does not need them: the checker never reads its own file.
  */
 
 import {
@@ -63,6 +67,8 @@ const TAG_OK = /^[a-z][a-z0-9-]*$/;
 const tagsOf = (line: string) =>
   [...line.matchAll(/`#([^`]*)`/g)].map((m) => m[1]);
 
+// br-C16: the extensions of scanned code. Shell scripts can hold business logic. YAML is left
+// out, so a quoted CI step name never counts as a test name.
 const CODE_EXT = new Set([
   ".ts",
   ".tsx",
@@ -90,6 +96,7 @@ const CODE_EXT = new Set([
   ".sh",
   ".bash",
 ]);
+// br-C16: dependency and build folders, read only where Scan: names a path inside one.
 const SKIP_DIRS = new Set([
   "node_modules",
   ".git",
@@ -379,14 +386,14 @@ const rowKey = (row: string) =>
     .map((c) => (/^:?-+:?$/.test(c) ? "---" : c))
     .join("|");
 
-// The master's Ignore: and Scan: lines, as absolute paths. Ignore wins where both apply.
+// br-C17, br-C18: the master's Ignore: and Scan: lines, as absolute paths. Ignore wins where both apply.
 let IGNORE: string[] = [];
 let SCAN: string[] = [];
 const within = (p: string, dirs: string[]) => dirs.some((d) => p === d || p.startsWith(d + sep));
 
-// Code files under dir. Copies of this checker are skipped, so its own text never counts as a
-// citation; Scan: reads them anyway, for a repo whose product is the checker. Inside a skipped
-// directory that only leads to a Scan: path, only that path is read (onlyScan).
+// br-C16: code files under dir. Copies of this checker are skipped, so its own text never counts as a
+// citation; Scan: reads one only when it names that file, for a repo whose product is the checker.
+// Inside a skipped directory that only leads to a Scan: path, only that path is read (onlyScan).
 function walk(dir: string, out: string[], onlyScan = false) {
   for (const name of readdirSync(dir)) {
     const p = join(dir, name);
@@ -401,14 +408,16 @@ function walk(dir: string, out: string[], onlyScan = false) {
       CODE_EXT.has(extname(name)) &&
       p !== LEDGER &&
       (!onlyScan || scanned) &&
-      (scanned || (p !== SELF && name !== "ledger-check.ts"))
+      // A copy of the checker is read only when Scan: names the file itself, so the citations it
+      // carries never count in a project that scans the folder holding its copy.
+      (SCAN.includes(p) || (p !== SELF && name !== "ledger-check.ts"))
     )
       out.push(p);
   }
   return out;
 }
 
-// A header setting: "Ignore: examples/, vendor/" → absolute paths. A path that does not exist
+// br-C19: a header setting, "Ignore: examples/, vendor/" → absolute paths. A path that does not exist
 // is a warning, since a typo would otherwise widen or narrow the scan silently.
 function setting(header: string[], name: string): string[] {
   const values = header
@@ -420,7 +429,7 @@ function setting(header: string[], name: string): string[] {
   return values.map((v) => resolve(ROOT, v));
 }
 
-// Spans of single-line string literals, so a test ID counts only when it is part of a test name.
+// br-C02: spans of single-line string literals, so a test ID counts only when it is part of a test name.
 function stringSpans(text: string): [number, number][] {
   const spans: [number, number][] = [];
   for (const m of text.matchAll(/(["'`])(?:\\.|(?!\1)[^\\])*\1/g))
@@ -428,7 +437,7 @@ function stringSpans(text: string): [number, number][] {
   return spans;
 }
 
-// An ID followed by a colon, or after @see, cites the rule (authoring rule M12). Any other
+// br-C01: an ID followed by a colon, or after @see, cites the rule (authoring rule M12). Any other
 // mention does not. A list ending in a colon cites every ID in it: "br-[X][NN], br-[Y][NN]: ...".
 function isCitation(text: string, at: number, length: number) {
   return (
@@ -566,7 +575,7 @@ function resultFiles(path: string, out: string[]): string[] {
   return out;
 }
 
-// --results takes files or directories, comma-separated. Formats are detected from content.
+// br-C06: --results takes files or directories, comma-separated. Formats are detected from content.
 function readResults(spec: string) {
   const passed = new Set<string>();
   const failed = new Set<string>();
@@ -604,6 +613,7 @@ function readResults(spec: string) {
         else if (o.ok === false) failed.add(m[1]);
       }
     }
+    // br-C07: results with no br- test names mean the tests were named some other way.
     if (outcomes.length > 0 && ids === 0) {
       const hint =
         format === "junit"
@@ -614,7 +624,7 @@ function readResults(spec: string) {
       );
     }
   }
-  // A test ID fails if any of its results failed, e.g. one row of a data-driven test.
+  // br-C05: a test ID fails if any of its results failed, e.g. one row of a data-driven test.
   for (const id of failed) passed.delete(id);
   return passed;
 }
@@ -674,6 +684,7 @@ function intentSummary(intents: Intent[]) {
 // The index, rebuilt from the rule entries: the master's rules, then each area file's, in document
 // order. Every cell comes from the rule, so nothing in it is edited by hand. Unpadded, to keep it
 // cheap to read; a formatter may pad it, and the checker compares cells, not spacing.
+// br-C11: one row per rule, every cell but Enforcement copied from its entry.
 function renderIndex(rules: Rule[], enforcement: (r: Rule) => string): string[] {
   const esc = (s: string) => s.replace(/\|/g, "\\|");
   const rows = rules.map((r) => {
@@ -726,6 +737,7 @@ function aboutArea(message: string): string | null {
 // Markdown beside the ledger: specs, briefs, notes. A spec names the intents it serves and cites
 // rules for its decisions (br-M30), so an ID that matches nothing is a broken link, and a spec
 // that names no intent is not yet tied to the ledger.
+// br-L14: a document beside the ledger names real rules and intents, and the intents it serves.
 function checkDocs(ruleIds: Set<string>, intentIds: Set<string>, areaFiles: string[]) {
   const skip = new Set([LEDGER, ...areaFiles, ...["BUSINESS-RULES-AUTHORING.md", "LEDGER-AUTHORING.md"].map((n) => join(dirname(LEDGER), n))]);
   const docs: string[] = [];
@@ -774,7 +786,7 @@ function main() {
   const rules = [...master.rules];
   const intents = [...master.intents];
 
-  // Area files, in registry order. Each holds the rules of the areas the registry gives it.
+  // br-L11: area files, in registry order. Each holds the rules of the areas the registry gives it.
   const areas = readRegistry(lines);
   const areaFiles = [...new Set(areas.flatMap((a) => (a.file ? [a.file] : [])))];
   const fileOf = new Map(areas.map((a) => [a.letter, a.file]));
@@ -811,7 +823,7 @@ function main() {
     else seen.set(r.id, r);
   }
 
-  // --area narrows what the report shows. Every rule is still read and checked, and the index
+  // br-C20: --area narrows what the report shows. Every rule is still read and checked, and the index
   // stays whole, because rules serve shared intents and depend on rules in other areas.
   const AREA = AREA_ARG ? areaLetters(AREA_ARG, areas, rules) : null;
   const inArea = (id: string) => !AREA || AREA.has(id[3]);
@@ -850,6 +862,7 @@ function main() {
   const { citations, mentions, tests: codeTests, testsAt, unprefixed } = scanCode();
   const docCount = checkDocs(ruleIds, intentIds, areaFiles);
   const ledgerTests = new Set(rules.flatMap((r) => r.tests));
+  // br-C10: a listed test named without its prefix is not counted, so say so.
   for (const u of unprefixed) {
     const id = u.split(" ")[0];
     if (ledgerTests.has(id))
@@ -886,26 +899,31 @@ function main() {
     const status = f.status ?? "";
     const retired = status === "retired";
 
+    // br-L01: one of the four statuses.
     if (!STATUSES.includes(status))
       errors.push(
         `${r.id}: status "${status}" is not one of ${STATUSES.join(", ")}.`,
       );
     if (!retired) {
+      // br-L02: a kind, a statement and a Fails if line make an active entry a rule.
       if (!f.kind) errors.push(`${r.id}: no kind.`);
       else if (!KINDS.includes(f.kind))
         errors.push(
           `${r.id}: kind "${f.kind}" is not one of ${KINDS.join(", ")}.`,
         );
+      // br-L04: a rule with no intent, tests or tags is unfinished.
       if (!f.serves) warnings.push(`${r.id}: serves no intent.`);
       if (!r.hasFailsIf) errors.push(`${r.id}: no "> Fails if" line.`);
       if (!r.statement) errors.push(`${r.id}: no statement.`);
       if (r.tests.length === 0) warnings.push(`${r.id}: no tests.`);
       if (r.tags.length === 0) warnings.push(`${r.id}: no tags (br-M08).`);
+      // br-L06: one decision per rule. A longer statement says why it cannot split.
       if (sentences(r.statement) > 2 && !f.compound) {
         warnings.push(
           `${r.id}: statement is ${sentences(r.statement)} sentences with no compound: reason.`,
         );
       }
+      // br-L07: a behaviour has a condition. A definition or invariant always holds.
       const startsWhen = /^when\b/i.test(r.statement);
       if (f.kind === "behaviour" && !startsWhen)
         warnings.push(`${r.id}: behaviour does not start with When.`);
@@ -914,17 +932,19 @@ function main() {
           `${r.id}: ${f.kind} is written as When/Then. Can its condition ever be false?`,
         );
       }
+      // br-L08: the status and the open questions agree.
       if (status === "settled" && r.hasOpenQuestions)
         warnings.push(`${r.id}: settled but still has open questions.`);
       if (status === "open" && !r.hasOpenQuestions)
         warnings.push(`${r.id}: open but lists no open questions.`);
-      // br-M28: a gap is where the code breaks a decision. An observed rule describes the code,
+      // br-L09, br-M28: a gap is where the code breaks a decision. An observed rule describes the code,
       // so the code cannot diverge from it.
       if (status === "observed" && f.gap)
         warnings.push(
           `${r.id}: observed with a gap:. An observed rule describes the code. Write the concern as suspect: in its source, or decide the rule (open or settled) and keep the gap.`,
         );
     }
+    // br-L03: serves and given point at entries that exist.
     for (const s of (f.serves ?? "").split(/[,\s]+/).filter(Boolean)) {
       if (!intentIds.has(s))
         errors.push(`${r.id}: serves ${s}, which is not an intent.`);
@@ -937,6 +957,7 @@ function main() {
     const bare = r.id.slice(3);
     const inCode = codeTests.get(bare) ?? new Set<string>();
     const missing = r.tests.filter((t) => !inCode.has(t));
+    // br-C09: a test in code that the entry does not list is one the ledger does not know.
     for (const t of inCode)
       if (!r.tests.includes(t))
         warnings.push(
@@ -944,6 +965,7 @@ function main() {
         );
     missingTests.set(r.id, missing);
 
+    // br-C03: the level rises only with evidence: a citation, every test named, every test passed.
     let level: Level = "none";
     const allTested = r.tests.length > 0 && missing.length === 0;
     if (allTested && passed && r.tests.every((t) => passed.has(t)))
@@ -959,6 +981,7 @@ function main() {
       );
     levels.set(r.id, level);
 
+    // br-L05: tags are lowercase letters, digits and hyphens.
     for (const t of r.tags)
       if (!TAG_OK.test(t))
         warnings.push(
@@ -968,6 +991,7 @@ function main() {
   }
 
 
+  // br-C08: every rule ID in code names a rule, whether cited, mentioned or a test name.
   for (const [bare, where] of citations) {
     if (!ruleIds.has(`br-${bare}`) && bare[0] !== "M")
       errors.push(
@@ -985,6 +1009,7 @@ function main() {
       errors.push(`br-${bare}: tests exist in code but no rule exists.`);
   }
 
+  // br-L13: an intent has a statement, a moment it breaks, and a rule that serves it.
   for (const i of intents) {
     if (!i.statement) errors.push(`${i.id}: no statement.`);
     for (const t of i.tags)
@@ -1005,6 +1030,7 @@ function main() {
       "Recent changes is no longer part of the format (2.5.0). History lives in each rule's source lines and in git; remove the section.",
     );
 
+  // br-C04: without results, a rule already passing stays passing while its tests exist.
   const cellFor = (r: Rule): string => {
     if (r.fields.status === "retired") return "—";
     let level = levels.get(r.id)!;
@@ -1014,6 +1040,7 @@ function main() {
     return r.fields.gap ? `${level}, gap` : level;
   };
 
+  // br-C21: one rule instead of the report.
   if (ONE_RULE) {
     const r = rules.find((x) => x.id === ONE_RULE);
     if (!r) {
@@ -1075,6 +1102,7 @@ function main() {
     rules.filter((r) => !r.id.startsWith("br-M")),
     cellFor,
   );
+  // br-C22: the index instead of the report, or one area's rows of it.
   if (PRINT_INDEX) {
     const rows = generated.slice(2).filter((row) => inArea(cells(row)[0]));
     console.log([...generated.slice(0, 2), ...rows].join("\n"));
@@ -1085,6 +1113,7 @@ function main() {
     current.length === generated.length &&
     current.every((l, i) => rowKey(l) === rowKey(generated[i]));
 
+  // br-C12: --verify compares cells, not padding, and names each row that differs.
   const stale: string[] = [];
   if (VERIFY && !WRITE && idx && !sameTable) {
     const before = new Map(current.map((l) => [cells(l)[0], rowKey(l)]));
@@ -1097,6 +1126,7 @@ function main() {
     if (!stale.length) stale.push("the index table's header or order differs.");
   }
 
+  // br-C13: --write replaces the table and nothing else.
   let changed = false;
   if (WRITE && idx && !sameTable) {
     if (tableAt) lines.splice(tableAt[0], tableAt[1] - tableAt[0], ...generated);
@@ -1122,7 +1152,7 @@ function main() {
     warnings.push(
       `${attendedCount} of ${active.length} active rules are attended (over a third). Keep attended for money, deletion, security and customer data (br-M19).`,
     );
-  // One file stays readable to about 150 rules. Past that, an agent reads more than the work needs.
+  // br-L12: one file stays readable to about 150 rules. Past that, an agent reads more than the work needs.
   const inMaster = allActive.filter((r) => r.file === LEDGER).length;
   if (inMaster > 150)
     warnings.push(
@@ -1203,7 +1233,7 @@ function main() {
     }
   }
 
-  // Observed and open entries close only when the owner answers; nothing else forces them to.
+  // br-C15: observed and open entries close only when the owner answers; nothing else forces them to.
   const waiting = [
     ...(AREA ? [] : intents.filter((i) => i.fields.status === "observed")),
     ...active.filter((r) => r.fields.status === "observed" || r.fields.status === "open"),
@@ -1287,6 +1317,7 @@ function main() {
     );
     exit = 1;
   }
+  // br-C14: --require counts the level. A gap does not lower it.
   if (REQUIRE) {
     const floor = LEVELS.indexOf(REQUIRE);
     const below = settled.filter(

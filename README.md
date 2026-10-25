@@ -278,6 +278,8 @@ business-rules-ledger/        the skill: install this folder
 examples/journal-app/         a small app built against a ledger. Start here.
 examples/quote-app/           a ledger written after the app shipped, split into area files
 specs/BUSINESS-RULES.md       the skill's own ledger: the rules its checker keeps
+specs/lite-spec-checker.md    how the checker's rules fit together, on one page
+tests/checker/                one test per test ID of that ledger (npm ci, then npm run ledger)
 scripts/package.sh            builds dist/business-rules-ledger-<version>.zip
 scripts/check.sh              one version everywhere; each example's copies match the assets (--fix syncs)
 ```
@@ -287,7 +289,7 @@ scripts/check.sh              one version everywhere; each example's copies matc
 Build the zip, or download it from the repo's releases when there is one:
 
 ```sh
-./scripts/package.sh        # → dist/business-rules-ledger-2.9.2.zip
+./scripts/package.sh        # → dist/business-rules-ledger-2.9.3.zip
 ```
 
 - **Claude apps (claude.ai, Desktop):** upload the zip as a custom skill in Claude's settings,
@@ -356,14 +358,15 @@ tests, a gap the first checker run found, and an old spec beside the ledger that
 Its ledger is split into a master and two area files, to show how a larger product is laid out.
 
 The skill also keeps a ledger of its own, [`specs/BUSINESS-RULES.md`](specs/BUSINESS-RULES.md):
-the rules its checker keeps, read out of `ledger-check.ts` and waiting for review like any
-ledger built from code. `npx tsx business-rules-ledger/assets/ledger-check.ts` checks it. Its
-header uses `Ignore: examples/`, because the examples have ledgers of their own, and
-`Scan: business-rules-ledger/assets/`, because here the checker is the product.
+the rules its checker keeps. They were read out of `ledger-check.ts`, settled in intent review,
+and each is tested by name in [`tests/checker/`](tests/checker), so `npm run ledger` shows every
+one passing. [`specs/lite-spec-checker.md`](specs/lite-spec-checker.md) explains how they fit
+together. Its header uses `Ignore: examples/`, because the examples have ledgers of their own,
+and `Scan: business-rules-ledger/assets/ledger-check.ts`, because here the checker is the product.
 
 ## Versions
 
-The skill is at **2.9.2**. Every ledger states its format (`Format: business-rules-ledger 2.9.2`),
+The skill is at **2.9.3**. Every ledger states its format (`Format: business-rules-ledger 2.9.3`),
 and the skill offers to upgrade an older ledger, listing the changes first. What changed in each
 version is in the changelog at the end of [`SKILL.md`](business-rules-ledger/SKILL.md).
 
