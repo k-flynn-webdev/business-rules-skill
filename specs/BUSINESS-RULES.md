@@ -138,20 +138,20 @@ Every rule, in this document or an area file. Built by `business-rules-ledger/as
 | ID | Rule | Serves | Tags | Status | Enforcement |
 | --- | --- | --- | --- | --- | --- |
 | br-C01 | A citation is a rule ID in code followed by a colon, or preceded by `@see`. A list of rule IDs that ends in a colon cites every ID in it. | in-01 | `citation` `enforcement` | observed | none |
-| br-C02 | A test name is a test ID with its br- prefix inside a single-line string literal in code. The same text anywhere else is a mention of the rule. | in-01 | `tests` `enforcement` | observed | none |
-| br-C03 | A rule's enforcement is passing when every ledger test has a test name in code and all of them passed in the results file. Otherwise it is tested when every ledger test has a test name, cited when code cites the rule, and none when neither holds. | in-01 | `enforcement` | observed | none |
-| br-C04 | When the checker runs without a results file, then a rule the index shows as passing stays passing while every one of its ledger tests still has a test name in code. | in-01 | `enforcement` `results` | observed | none |
+| br-C02 | A test name is a test ID with its br- prefix inside a single-line string literal in code. The same text anywhere else is a mention of the rule. | in-01 | `tests` `enforcement` | settled | none |
+| br-C03 | A rule's enforcement is passing when every ledger test has a test name in code and all of them passed in the results file. Otherwise it is tested when every ledger test has a test name, cited when code cites the rule, and none when neither holds. | in-01 | `enforcement` | settled | none |
+| br-C04 | When the checker runs without a results file, then a rule the index shows as passing stays passing while every one of its ledger tests still has a test name in code. | in-01 | `enforcement` `results` | settled | none |
 | br-C05 | When any result for a test ID failed, then that test has not passed, even if other results for the same ID passed. | in-01 | `results` `enforcement` | observed | none |
 | br-C06 | When the checker is given results, then it reads Jest or Vitest JSON, TRX and JUnit XML from files or directories, comma-separated. It tells the formats apart by their content, not their names. | in-01 | `results` `stacks` | observed | none |
 | br-C07 | When a results file holds results but none is named with a br- test ID, then the checker warns and names the file. | in-01 | `results` `stacks` | observed | none |
-| br-C08 | When a rule ID in scanned code names no rule in the ledger, then the checker reports an error, whether the ID is a citation, a mention or a test name. Authoring rule IDs (br-M) are exempt. | in-04 | `citation` `lint` | observed | none |
+| br-C08 | When a rule ID in scanned code names no rule in the ledger, then the checker reports an error, whether the ID is a citation, a mention or a test name. Authoring rule IDs (br-M) are exempt. | in-04 | `citation` `lint` | settled | none |
 | br-C09 | When scanned code has a test name for a rule whose entry does not list that test, then the checker warns. | in-01 | `tests` | observed | none |
 | br-C10 | When a string literal in scanned code holds a test ID without its br- prefix, and the ledger lists that test, then the checker warns that the test is not counted. | in-01 | `tests` | observed | none |
 | br-C11 | The index has one row per rule except the authoring rules, retired rules included: the master's rules first, then each area file's in registry order. Every cell but Enforcement comes from the rule's entry. | in-02 | `index` | observed | none |
 | br-C12 | When the checker runs with --verify and the index's cells differ from what --write would build, then it exits 1 and names each row that differs. Spacing and padding do not count as differences. | in-02 | `index` `ci` | observed | none |
 | br-C13 | When the checker runs with --write and the index differs, then it rewrites the index table and leaves every other line of the master unchanged. | in-02 | `index` | observed | none |
 | br-C14 | When the checker runs with --require at a level, then it exits 1 if any settled rule's enforcement is below that level. | in-01 | `enforcement` `ci` | settled | none |
-| br-C15 | When the ledger has waiting entries, then the report lists them oldest first: an observed entry dated by its oldest source line, an open rule by its newest. It shows the 10 oldest unless --waiting is given. | in-03 | `waiting` | observed | none |
+| br-C15 | When the ledger has waiting entries, then the report lists them oldest first: an observed entry dated by its oldest source line, an open rule by its newest. It shows the 10 oldest unless --waiting is given. | in-03 | `waiting` | settled | none |
 | br-C16 | Scanned code is every file under the repo root with a code extension, shell scripts included, except in dependency and build folders, the ledger itself, and any file named ledger-check.ts. | in-01 in-06 | `scan` | settled | none |
 | br-C17 | When the master's header has an `Ignore:` line, then the checker reads no code and no document under those paths, even where `Scan:` names them. | in-06 | `scan` | settled | none |
 | br-C18 | When the master's header has a `Scan:` line, then the checker also reads code under those paths that it skips by default. Inside a skipped folder, only the named paths are read. | in-06 | `scan` | settled | none |
@@ -168,7 +168,7 @@ Every rule, in this document or an area file. Built by `business-rules-ledger/as
 | br-L07 | When a behaviour does not start with When, or a definition or invariant does, then the checker warns. | in-04 | `lint` `kind` | observed | none |
 | br-L08 | When a settled rule still has open questions, or an open rule lists none, then the checker warns. | in-03 in-04 | `lint` `waiting` | observed | none |
 | br-L09 | When an observed rule has a `gap:` line, then the checker warns. | in-04 | `lint` | observed | none |
-| br-L10 | When at least 6 rules are active and more than a third of them are attended, then the checker warns. | in-04 | `lint` `attended` | observed | none |
+| br-L10 | When at least 6 rules are active and more than a third of them are attended, then the checker warns. | in-04 | `lint` `attended` | settled | cited |
 | br-L11 | When an area file the registry names is missing, a rule sits in a file the registry does not give its area, or a rule ID is defined twice, then the checker reports an error. | in-04 in-05 | `lint` `area` | observed | none |
 | br-L12 | When more than 150 active rules sit in the master, then the checker warns that areas should move to area files. | in-05 | `lint` `area` `scale` | observed | none |
 | br-L13 | When an intent has no statement, the checker reports an error. When it has no `broken when:` line, or no rule serves it, the checker warns. | in-04 | `lint` `intents` | observed | none |
@@ -219,7 +219,7 @@ A citation is a rule ID in code followed by a colon, or preceded by `@see`. A li
 
 ## br-C02
 
-kind: definition | serves: in-01 | status: observed
+kind: definition | serves: in-01 | status: settled
 
 A test name is a test ID with its br- prefix inside a single-line string literal in code. The same text anywhere else is a mention of the rule.
 
@@ -238,12 +238,13 @@ A test name is a test ID with its br- prefix inside a single-line string literal
 **Source**
 
 - 2026-10-22, observed: `ledger-check.ts` stringSpans() and scanCode(). suspect: a string that spans lines, such as a Python triple-quoted string or a multi-line template literal, is not read, so a test named across lines is missed.
+- 2026-10-25, intent review. Intended: every common test framework names a test on one line. Reading strings that span lines would also count IDs in long docstrings as tests.
 
 ---
 
 ## br-C03
 
-kind: definition | serves: in-01 | status: observed
+kind: definition | serves: in-01 | status: settled
 
 A rule's enforcement is passing when every ledger test has a test name in code and all of them passed in the results file. Otherwise it is tested when every ledger test has a test name, cited when code cites the rule, and none when neither holds.
 
@@ -265,12 +266,13 @@ A rule's enforcement is passing when every ledger test has a test name in code a
 **Source**
 
 - 2026-10-22, observed: `ledger-check.ts` main(), the level computation. A gap adds `, gap` and a retired rule shows `—`. suspect: tested does not need a citation; a tested rule that nothing cites only gets a warning.
+- 2026-10-25, intent review. Intended: the test is the proof. A citation marks where the rule lives, so a missing one earns a warning, not a lower level.
 
 ---
 
 ## br-C04
 
-kind: behaviour | serves: in-01 | given: br-C03 | status: observed
+kind: behaviour | serves: in-01 | given: br-C03 | status: settled
 
 When the checker runs without a results file, then a rule the index shows as passing stays passing while every one of its ledger tests still has a test name in code.
 
@@ -286,6 +288,7 @@ When the checker runs without a results file, then a rule the index shows as pas
 **Source**
 
 - 2026-10-22, observed: `ledger-check.ts` cellFor(), which reads the previous Enforcement column. suspect: a test that has started failing since the last run with results still shows passing.
+- 2026-10-25, intent review. Intended: a quick local run without results should not drop every rule to tested. CI always runs with results, so a newly failing test is caught there.
 
 ---
 
@@ -355,7 +358,7 @@ When a results file holds results but none is named with a br- test ID, then the
 
 ## br-C08
 
-kind: behaviour | serves: in-04 | status: observed
+kind: behaviour | serves: in-04 | status: settled
 
 When a rule ID in scanned code names no rule in the ledger, then the checker reports an error, whether the ID is a citation, a mention or a test name. Authoring rule IDs (br-M) are exempt.
 
@@ -373,6 +376,7 @@ When a rule ID in scanned code names no rule in the ledger, then the checker rep
 **Source**
 
 - 2026-10-22, observed: `ledger-check.ts` main(), after scanCode(). suspect: a mention is held to the same standard as a citation, so an old ID in a comment fails the run.
+- 2026-10-25, intent review. Intended: a reference to a rule that does not exist misleads whoever reads it, and this is how a deleted rule's leftovers get cleaned up. Retired rules stay in the ledger, so mentioning them stays fine.
 
 ---
 
@@ -508,7 +512,7 @@ When the checker runs with --require at a level, then it exits 1 if any settled 
 
 ## br-C15
 
-kind: behaviour | serves: in-03 | status: observed
+kind: behaviour | serves: in-03 | status: settled
 
 When the ledger has waiting entries, then the report lists them oldest first: an observed entry dated by its oldest source line, an open rule by its newest. It shows the 10 oldest unless --waiting is given.
 
@@ -532,6 +536,7 @@ When the ledger has waiting entries, then the report lists them oldest first: an
 **Source**
 
 - 2026-10-22, observed: `ledger-check.ts` main(), the waiting list. suspect: 10 is a hard-coded number (WAITING_SHOWN) with no config. Ages count from the local date.
+- 2026-10-25, intent review. Intended: 10 fits a terminal and --waiting lists the rest. It needs no setting.
 
 ---
 
@@ -887,7 +892,7 @@ When an observed rule has a `gap:` line, then the checker warns.
 
 ## br-L10
 
-kind: behaviour | serves: in-04 | status: observed
+kind: behaviour | serves: in-04 | status: settled
 
 When at least 6 rules are active and more than a third of them are attended, then the checker warns.
 
@@ -906,6 +911,7 @@ When at least 6 rules are active and more than a third of them are attended, the
 **Source**
 
 - 2026-10-22, observed: `ledger-check.ts` main(), attendedCount. Implements br-M19. suspect: the minimum of 6 is a hard-coded number with no comment.
+- 2026-10-25, intent review. Intended: below 6 rules a third is one or two, so a new ledger would warn at once. The code now says so in a comment.
 
 ---
 

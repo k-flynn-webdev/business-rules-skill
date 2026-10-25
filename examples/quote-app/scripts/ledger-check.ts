@@ -1116,6 +1116,7 @@ function main() {
   );
   const active = allActive.filter((r) => inArea(r.id));
   // Attended marks risk (br-M19). When most rules carry it, an agent can do little alone.
+  // br-L10: from 6 rules. Below that a third is one or two, and a new ledger would warn at once.
   const attendedCount = active.filter((r) => r.fields.attended).length;
   if (active.length >= 6 && attendedCount * 3 > active.length)
     warnings.push(
