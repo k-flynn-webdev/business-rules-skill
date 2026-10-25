@@ -13,6 +13,19 @@ jobs:
       - name: Skill agrees with itself
         run: ./scripts/check.sh
 
+  ledger:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Installs the checker's tests
+        run: npm ci
+      - name: "The skill's own ledger: every rule passing, index current"
+        run: npm run ledger:verify
+
   example:
     runs-on: ubuntu-latest
     strategy:
