@@ -37,12 +37,13 @@ One run, in order:
 4. **Read the results**, if given: Jest or Vitest JSON, TRX or JUnit XML, recognised by content
    (br-C06). One failure fails the test (br-C05). A results file with no br- test names is a
    warning (br-C07).
-5. **Compute each rule's enforcement**: none, cited, tested, passing (br-C03). Without results, a
-   rule already passing stays passing while its test names exist (br-C04).
+5. **Compute each rule's enforcement**: unlinked, linked, tests written, tests pass (br-C03).
+   Without results, a rule already at tests pass stays there while its test names exist (br-C04).
 6. **Build the index** from the entries (br-C11). `--write` rewrites it (br-C13); `--verify`
    compares and fails on a difference (br-C12).
-7. **Report.** Counts, settled rules not yet passing, what waits on the owner oldest first
-   (br-C15), and known gaps. `--require` sets the exit code (br-C14).
+7. **Report.** The settled rules counted by level, highest first (br-C23), those whose tests do
+   not pass yet, what waits on the owner oldest first (br-C15), and known gaps. `--require` sets
+   the exit code (br-C14).
 
 Instead of the full report, three modes print less: `--area` (br-C20), `--rule` (br-C21) and
 `--index` (br-C22).
@@ -54,23 +55,23 @@ Instead of the full report, three modes print less: `--area` (br-C20), `--rule` 
 | `readResults()` and the `*Outcomes()` readers | Test results, by format                | br-C05, br-C06, br-C07 |
 | `main()`, the level computation, `cellFor()` | Enforcement                             | br-C03, br-C04         |
 | `renderIndex()`                     | The index                                        | br-C11, br-C12, br-C13 |
-| `main()`, the report                | Counts, waiting list, gaps, exit code            | br-C14, br-C15         |
+| `main()`, the report                | Counts, waiting list, gaps, exit code            | br-C14, br-C15, br-C23 |
 | `areaLetters()`, `aboutArea()`      | Narrowing to areas                               | br-C20, br-C22         |
 
 ## Why these rules work together
 
 **Evidence only rises with proof.** A citation says where a rule lives, a test name says a test
 exists, and a result says it passed (br-C01, br-C02, br-C03). Nothing in the ledger can claim a
-level its code does not reach. A test name with no citation still counts as tested, because the
+level its code does not reach. A test name with no citation still counts as tests written, because the
 test is the proof and the citation only a pointer; the missing pointer is a warning.
 
-**Sticky passing is safe because CI always has results.** br-C04 keeps a quick local run from
-dropping every rule to tested. It can hide a newly failing test only until the next run with
+**Sticky "tests pass" is safe because CI always has results.** br-C04 keeps a quick local run
+from dropping every rule to tests written. It can hide a newly failing test only until the next run with
 results, and CI runs with results every time. br-C05 makes sure that run cannot be fooled by one
 passing result among several.
 
 **A gap does not lower the level.** `--require` counts the level and nothing else (br-C14), so
-`passing, gap` meets `--require=passing`. The gap stays visible under _Known gaps_, and br-L15
+`tests pass, gap` meets `--require=tests-pass`. The gap stays visible under _Known gaps_, and br-L15
 warns that either the gap is stale or the tests miss it.
 
 **The index is rebuilt locally and verified in CI.** `--write` and `--verify` build the same
@@ -87,7 +88,7 @@ br-C18). The checker never reads a copy of itself unless `Scan:` names that file
 the citations it carries, written for this ledger, never count in a user's project.
 
 **One area can be gated on its own.** With `--area`, the exit code follows what is shown
-(br-C20), so `--area=B --require=tested` gates area B without waiting for the others. The full
+(br-C20), so `--area=B --require=tests-written` gates area B without waiting for the others. The full
 run, without `--area`, still fails on any error anywhere.
 
 ## Mechanism
@@ -98,15 +99,15 @@ run, without `--area`, still fails on any error anywhere.
   name must sit on one line (br-C02).
 - Results formats are told apart by their content: JSON with `testResults`, XML with
   `TestRun` or `testsuite` (br-C06).
-- br-C04 reads the previous Enforcement column from the index being replaced, so sticky passing
-  needs no state file.
+- br-C04 reads the previous Enforcement column from the index being replaced, so a sticky
+  "tests pass" needs no state file. It also reads `passing`, the name before 2.10.0.
 - The tests in `tests/checker/` run the shipped checker against small throwaway repos, one test
   per test ID. Fixture text never spells out a rule ID, so the checker reading this repo never
   counts a fixture's rule as its own.
 
 ## Known issues
 
-- None. Every rule is passing, tested by name in `tests/checker/`.
+- None. Every rule is at tests pass, tested by name in `tests/checker/`.
 
 ## History
 
@@ -116,3 +117,5 @@ run, without `--area`, still fails on any error anywhere.
   passing-with-a-gap a warning (2.9.2).
 - 2026-10-25: every rule tested by name and cited where the checker enforces it. A copy of the
   checker is read only when `Scan:` names its file (2.9.3).
+- 2026-10-25: the levels renamed unlinked, linked, tests written and tests pass, and the report
+  counts settled rules highest first, without empty levels (2.10.0).

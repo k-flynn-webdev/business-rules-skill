@@ -7,7 +7,7 @@
         "test": "vitest run",
         "test:results": "vitest run --reporter=json --outputFile=test-results.json",
         "ledger": "npm run test:results; tsx business-rules-ledger/assets/ledger-check.ts --results=test-results.json --write",
-        "ledger:verify": "npm run test:results && tsx business-rules-ledger/assets/ledger-check.ts --results=test-results.json --verify --require=passing",
+        "ledger:verify": "npm run test:results && tsx business-rules-ledger/assets/ledger-check.ts --results=test-results.json --verify --require=tests-pass",
         "rule": "tsx business-rules-ledger/assets/ledger-check.ts --rule",
         "area": "tsx business-rules-ledger/assets/ledger-check.ts --area"
     },

@@ -108,12 +108,12 @@ it("br-B02.7 100 emoji, 200 characters, are allowed", () => { … });
 `git grep -nw "br-B02"` returns the rule, the code and the tests together. The checker reads the same
 IDs and writes each rule's enforcement into the ledger's index:
 
-| Enforcement | Meaning                                                 |
-| ----------- | ------------------------------------------------------- |
-| `none`      | Written down. No code cites it.                         |
-| `cited`     | Code cites it, but not every test in the ledger exists. |
-| `tested`    | Every test in the ledger has a test named after it.     |
-| `passing`   | Those tests ran and passed in the results you gave it.  |
+| Enforcement     | Meaning                                                 |
+| --------------- | ------------------------------------------------------- |
+| `unlinked`      | Written down. No code cites it.                         |
+| `linked`        | Code cites it, but not every test in the ledger exists. |
+| `tests written` | Every test in the ledger has a test named after it.     |
+| `tests pass`    | Those tests ran and passed in the results you gave it.  |
 
 ### Reading the IDs
 
@@ -130,7 +130,7 @@ The quickest way to see one rule is the checker:
 
 ```
 $ npx tsx scripts/ledger-check.ts --rule br-B02
-br-B02  settled, passing
+br-B02  settled, tests pass
 Track text is between 2 and 200 characters, counted after trimming.
 
 Entry:     specs/BUSINESS-RULES.md:232
@@ -210,7 +210,7 @@ not answer, and decides it in the code. The ledger pulls that decision back into
    outlives the ticket thread (`2026-08-02, TICK-118. Venues were cancelling on the Friday…`).
 3. **The ticket cites the rule.** Its acceptance criteria become rule IDs, `br-B02` and
    `br-B05`, not a paraphrase. When a rule is amended, the ticket is still right.
-4. **The checker closes the loop.** The ticket is done when its rules reach `passing`. A rule the
+4. **The checker closes the loop.** The ticket is done when its rules reach `tests pass`. A rule the
    code does not keep yet carries a `gap:` line, which can name the ticket that will fix it.
 
 So the tracker keeps what it is good at — planning, ownership, status — and stops being a place
@@ -228,7 +228,7 @@ Five habits. Most are one line.
 - **When the ledger does not answer,** do not guess. Say _"write this down"_, or leave the rule
   `open` with the question under it.
 - **Before the PR,** run the checker. In CI, run the tests with a results file, then
-  `ledger-check.ts --results=… --verify --require=tested`.
+  `ledger-check.ts --results=… --verify --require=tests-written`.
 
 ## When the ledger grows
 
@@ -246,7 +246,7 @@ specs/rules/accounts.md
 - **One index, in the master, lists every rule.** The checker builds it from every file, fails CI
   when it is out of date, and reports a missing file, a rule in the wrong file or a duplicate ID.
 - **Each owner gets their own report.** `--area` lists the areas with their owners and what is
-  waiting on each; `--area=B` shows one area's report, and `--area=B --require=tested` gates it in CI.
+  waiting on each; `--area=B` shows one area's report, and `--area=B --require=tests-written` gates it in CI.
   `--index --area=B` prints just that area's index rows, and the audio script takes `--area=B` too.
 - **What everyone shares lives once,** in `BUSINESS-RULES-AUTHORING.md`: how to read the ledger,
   how to cite it, and the authoring rules. The ledger holds only this product's content.
@@ -289,7 +289,7 @@ scripts/check.sh              one version everywhere; each example's copies matc
 Build the zip, or download it from the repo's releases when there is one:
 
 ```sh
-./scripts/package.sh        # → dist/business-rules-ledger-2.9.3.zip
+./scripts/package.sh        # → dist/business-rules-ledger-2.10.0.zip
 ```
 
 - **Claude apps (claude.ai, Desktop):** upload the zip as a custom skill in Claude's settings,
@@ -313,7 +313,7 @@ Talk to Claude normally; the skill triggers on what you are doing.
 | "Intent review"                                           | Walks the observed rules with you: intended, accident (becomes a `gap`), or doesn't matter.                               |
 | "Grill me"                                                | Settles open rules until every answer is testable: one question at a time, or a numbered batch you answer in one message. |
 | "Fresh eyes" / "review the ledger"                        | Looks for rot: stale sources, undefined terms, rules over two sentences, specs that contradict rules.                     |
-| "What's left?" / "which rules are enforced?"              | Runs the checker and reports settled rules below `passing`, grouped by intent, and the gaps.                              |
+| "What's left?" / "which rules are enforced?"              | Runs the checker and reports settled rules below `tests pass`, grouped by intent, and the gaps.                           |
 | "Write a spec for…"                                       | Writes a lite spec that cites a rule for every decision, capturing missing rules first.                                   |
 | An area grows past about eight rules                      | Offers a lite spec, so the flow, mechanism and look and feel move out and each rule stays short.                          |
 | "Read me the rules"                                       | Produces a listening script: each intent, then the rules that serve it.                                                   |
@@ -323,9 +323,9 @@ Talk to Claude normally; the skill triggers on what you are doing.
 ```sh
 npx tsx scripts/ledger-check.ts                         # report
 npx tsx scripts/ledger-check.ts --write                 # rebuild the index from the rules
-npx tsx scripts/ledger-check.ts --results=results.json  # test results decide "passing"
+npx tsx scripts/ledger-check.ts --results=results.json  # test results decide "tests pass"
 npx tsx scripts/ledger-check.ts --verify                # exit 1 if the index is stale
-npx tsx scripts/ledger-check.ts --require=tested        # exit 1 if a settled rule has no tests
+npx tsx scripts/ledger-check.ts --require=tests-written # exit 1 if a settled rule has no tests
 npx tsx scripts/ledger-check.ts --tag=privacy           # list the rules carrying a tag
 npx tsx scripts/ledger-check.ts --rule br-B02           # one rule: entry, citations, tests
 npx tsx scripts/ledger-check.ts --area                  # list the areas: file, owner, what is waiting
@@ -336,10 +336,10 @@ npx tsx scripts/ledger-check.ts --waiting               # list everything waitin
 
 It reads Jest and Vitest JSON, TRX (`dotnet test --logger trx`) and JUnit XML (pytest, Go via
 gotestsum), so it works across a TypeScript front end and a .NET or Python back end in one repo.
-In CI, run the tests with a results file and then `--verify --require=tested`.
+In CI, run the tests with a results file and then `--verify --require=tests-written`.
 
 `--require` counts the enforcement level and nothing else. **A rule with a `gap:` still meets it**:
-`passing, gap` meets `--require=passing`. The gap stays in the report under _Known gaps_, and the
+`tests pass, gap` meets `--require=tests-pass`. The gap stays in the report under _Known gaps_, and the
 checker warns when a rule passes with one, because either the gap is stale or the tests miss it.
 
 ## The examples
@@ -360,13 +360,13 @@ Its ledger is split into a master and two area files, to show how a larger produ
 The skill also keeps a ledger of its own, [`specs/BUSINESS-RULES.md`](specs/BUSINESS-RULES.md):
 the rules its checker keeps. They were read out of `ledger-check.ts`, settled in intent review,
 and each is tested by name in [`tests/checker/`](tests/checker), so `npm run ledger` shows every
-one passing. [`specs/lite-spec-checker.md`](specs/lite-spec-checker.md) explains how they fit
+one at tests pass. [`specs/lite-spec-checker.md`](specs/lite-spec-checker.md) explains how they fit
 together. Its header uses `Ignore: examples/`, because the examples have ledgers of their own,
 and `Scan: business-rules-ledger/assets/ledger-check.ts`, because here the checker is the product.
 
 ## Versions
 
-The skill is at **2.9.3**. Every ledger states its format (`Format: business-rules-ledger 2.9.3`),
+The skill is at **2.10.0**. Every ledger states its format (`Format: business-rules-ledger 2.10.0`),
 and the skill offers to upgrade an older ledger, listing the changes first. What changed in each
 version is in the changelog at the end of [`SKILL.md`](business-rules-ledger/SKILL.md).
 

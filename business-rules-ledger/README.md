@@ -1,6 +1,6 @@
 ---
 metadata:
-  version: "2.9.3"
+  version: "2.10.0"
 ---
 
 # The Business Rules Ledger
@@ -98,17 +98,17 @@ That's the whole idea. The rule has an ID, the code cites the ID, the test is na
 
 A checker greps your codebase and works out, for each rule, how far it actually got:
 
-| Level     | Meaning                                                   |
-| --------- | --------------------------------------------------------- |
-| `none`    | Written down. Nothing in the code mentions it.            |
-| `cited`   | Code cites the rule (`br-B03:` or `@see br-B03`).         |
-| `tested`  | A test named after the rule exists.                       |
-| `passing` | That test ran and passed in the results file you gave it. |
+| Level           | Meaning                                                   |
+| --------------- | --------------------------------------------------------- |
+| `unlinked`      | Written down. Nothing in the code cites it.               |
+| `linked`        | Code cites the rule (`br-B03:` or `@see br-B03`).         |
+| `tests written` | A test named after the rule exists.                       |
+| `tests pass`    | That test ran and passed in the results file you gave it. |
 
 You never write the index by hand — the checker builds it from the rules and computes that column. Run it in
-CI with `--verify` and the build fails when the index is stale. Run it with `--require=tested`
+CI with `--verify` and the build fails when the index is stale. Run it with `--require=tests-written`
 and the build fails when a settled rule has no test. A known `gap:` does not lower the level, so
-`passing, gap` still meets `--require=passing`; the checker warns about it instead.
+`tests pass, gap` still meets `--require=tests-pass`; the checker warns about it instead.
 
 That's the difference in one sentence: **a spec tells you what someone once intended; a ledger
 tells you which of those intentions the code is currently keeping.**

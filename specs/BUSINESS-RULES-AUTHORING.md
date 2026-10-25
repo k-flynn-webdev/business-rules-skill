@@ -1,7 +1,7 @@
 # Business rules ledger — reading, citing and authoring
 
 How to read the business rules ledger in this folder, cite it in code, and write or amend it.
-Format: business-rules-ledger 2.9.3
+Format: business-rules-ledger 2.10.0
 
 Everything a ledger has in common lives here, so the ledger itself holds only its own intents,
 rules and index. Read _How to read the ledger_ to read it, _Citing rules in code_ to cite it, and
@@ -65,12 +65,12 @@ public void TheTest() { /* Given, When, Then */ }
 Put the test ID in the test's display name, not the method name. Run .NET tests with
 `dotnet test --logger trx` and pass the TestResults folder to the checker's `--results=`.
 
-| Enforcement | Meaning                                                                                 |
-| ----------- | --------------------------------------------------------------------------------------- |
-| none        | No code cites the rule.                                                                 |
-| cited       | Code cites the rule, but not every ledger test has a named test in code.                |
-| tested      | Every ledger test has a test named after it in code.                                    |
-| passing     | Those tests all passed in the supplied results. This does not prove they test the rule. |
+| Enforcement   | Meaning                                                                                 |
+| ------------- | --------------------------------------------------------------------------------------- |
+| unlinked      | No code cites the rule.                                                                 |
+| linked        | Code cites the rule, but not every ledger test has a named test in code.                |
+| tests written | Every ledger test has a test named after it in code.                                    |
+| tests pass    | Those tests all passed in the supplied results. This does not prove they test the rule. |
 
 `, gap` means the rule has a known divergence recorded in its `gap:` line.
 

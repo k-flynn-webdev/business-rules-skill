@@ -2,12 +2,12 @@
 name: "business-rules-ledger"
 description: Capture product intents, business rules and their tests in a business rules ledger — a living, grep-able source of truth that code and tests conform to, with each rule's enforcement computed from the code. Use whenever the user wants to write down a rule, decision, invariant or intent ("add a rule", "write this down", "how should this behave", "what's the rule for X"); describes what the system should or shouldn't do while working on tickets, bugs or features; asks for a spec, requirements or acceptance criteria; wants a ledger built from a codebase; or mentions a rules ledger, intents, br- IDs or rule-driven development. Also use for "grill me" or settling open rules; "intent review" or confirming observed rules; "fresh eyes" or reviewing the ledger; asking which rules are enforced, what's left, or to check the ledger against the code; and "read me the rules", "audio" or "listen". Prefer this over a prose spec.
 metadata:
-  version: "2.9.3"
+  version: "2.10.0"
 ---
 
 # Business Rules Ledger
 
-Version 2.9.3. See the changelog at the end.
+Version 2.10.0. See the changelog at the end.
 
 A ledger of intents and the numbered rules that serve them. An intent says what a user should be
 able to do and what would feel broken. A rule is one decision, stated in one or two sentences,
@@ -408,7 +408,7 @@ the acceptance list. Build in small pieces, each citing its rules and naming its
   elsewhere, write it without the colon, so the index never claims enforcement that is not there.
 - **Rebuilds.** On a rewrite, `gap:` lines still describe the old code. Leave each one until the
   feature it describes is rebuilt, then delete it or rewrite it for the new code. Enforcement
-  starts at `none` on the new code; that is the honest starting point.
+  starts at `unlinked` on the new code; that is the honest starting point.
 - **Tunable numbers** (br-M31). The rule states the default, a design note names the config key,
   and the tests state the number themselves.
 
@@ -501,7 +501,7 @@ Then work through every rule and check:
 5. **Size and mechanism.** Over two sentences without a `compound:` reason? Describing update
    steps instead of an outcome? Propose the split using the _Complex areas_ pattern.
 6. **Test fit.** For attended rules at least, does each named test in code check the rule's
-   Fails if condition, or does it only exist? A hollow test reports `passing` all the same.
+   Fails if condition, or does it only exist? A hollow test reaches `tests pass` all the same.
 7. **Cross-rule agreement.** Do rules, examples and tests that touch the same concept agree?
    Recompute every worked example and every number in a test against the definition. A formula
    restated in two places is a contradiction waiting to happen.
@@ -530,19 +530,22 @@ When finished, report how many issues were found, fixed, and deferred.
 Enforcement says whether the code has caught up with the ledger. It is computed, never written by
 hand (br-M29), and it lives in the Enforcement column of the generated index.
 
-| State     | Meaning                                                                                   |
-| --------- | ----------------------------------------------------------------------------------------- |
-| `none`    | No code cites the rule.                                                                   |
-| `cited`   | Code cites the rule, but not every ledger test has a named test in code.                  |
-| `tested`  | Every ledger test (`B07.1`, `B07.2` …) has a test named `br-B07.1`, `br-B07.2` … in code. |
-| `passing` | Those tests all passed in the supplied test results.                                      |
+| Level           | Meaning                                                                                   |
+| --------------- | ----------------------------------------------------------------------------------------- |
+| `unlinked`      | No code cites the rule.                                                                   |
+| `linked`        | Code cites the rule, but not every ledger test has a named test in code.                  |
+| `tests written` | Every ledger test (`B07.1`, `B07.2` …) has a test named `br-B07.1`, `br-B07.2` … in code. |
+| `tests pass`    | Those tests all passed in the supplied test results.                                      |
+
+Before 2.10.0 the levels were `none`, `cited`, `tested` and `passing`. The checker still reads
+those names, in `--require` and in an index it has not rewritten yet.
 
 `, gap` is appended when the rule has a `gap:` line. Retired rules show `—`.
 
-The index then doubles as the work list: every settled rule that is not `passing` is work left,
+The index then doubles as the work list: every settled rule not at `tests pass` is work left,
 and every `gap` is a known lie in the code.
 
-`passing` means the named tests exist and passed. It does not prove they test the rule: a test
+`tests pass` means the named tests exist and passed. It does not prove they test the rule: a test
 named `br-B07.1` that asserts nothing still passes. Say so when reporting enforcement, and in
 review mode read the tests of any `attended: required` rule against its Fails if line.
 
@@ -560,10 +563,10 @@ review mode read the tests of any `attended: required` rule against its Fails if
   ledgers of their own; `Scan: dist/shared/` reads code it would otherwise skip, and a copy of the
   checker only when the line names its file. Ignore wins where both apply, and a path that does not exist is a warning. The report names both on its
   second line
-- reads test results when given `--results=` to decide `passing`: Jest or Vitest JSON, TRX
+- reads test results when given `--results=` to decide `tests pass`: Jest or Vitest JSON, TRX
   (`dotnet test --logger trx`) or JUnit XML (pytest, Go via gotestsum, most CI tools). It takes
   files or directories, comma-separated, and detects each format from its content. A test ID with
-  any failing result, such as one row of a data-driven test, is not passing
+  any failing result, such as one row of a data-driven test, does not pass
 - lists what is waiting on the owner: observed intents, observed rules and open rules, oldest
   first, with their counts and each one's number of open questions. An observed entry is dated
   from its oldest source line (when it was read), an open rule from its newest. It shows the 10
@@ -587,9 +590,9 @@ review mode read the tests of any `attended: required` rule against its Fails if
   with file and line, and mentions that are not citations. Use it to answer "what does br-B02
   say, and where is it enforced?" without reading the whole report
 - with `--area`, lists the areas instead of the report: each one's file, owner, and counts of
-  active, settled, passing and waiting rules. With `--area=B` (or `--area B`, `B,U`, the area's
+  active and settled rules, rules whose tests pass, and waiting rules. With `--area=B` (or `--area B`, `B,U`, the area's
   name, or its area file's path), the report covers only those areas: their counts, the settled
-  rules not yet passing, their waiting list (intents are left out), gaps, and the errors and
+  rules whose tests do not pass yet, their waiting list (intents are left out), gaps, and the errors and
   warnings about their rules, plus anything about the ledger as a whole. Messages about other
   areas and intents are only counted. The exit code follows what is shown, so `--require` gates
   one area. Every rule is still read and checked, and `--write` still builds the whole index
@@ -605,7 +608,10 @@ review mode read the tests of any `attended: required` rule against its Fails if
   document order. Rows are unpadded to stay cheap to read; the checker compares cells, so a
   formatter that pads the table changes nothing
 - with `--verify`, exits non-zero when the index differs from what `--write` would build
-- with `--require=tested` (or any level), exits non-zero when a settled rule is below it
+- with `--require=tests-written` (or any level: `unlinked`, `linked`, `tests-written`,
+  `tests-pass`), exits non-zero when a settled rule is below it
+- counts the settled rules by level, highest first, leaving out empty levels:
+  `Settled rules: 37 — 30 tests pass, 4 tests written, 2 linked, 1 unlinked.`
 
 It is a local script, like the audio script. It runs on the developer's machine and in the
 conversation. Nothing is hooked up unless the user chooses to.
@@ -615,10 +621,10 @@ code:**
 
 1. Check whether `scripts/ledger-check.ts` exists in the project.
    - **Yes** — run `npx tsx scripts/ledger-check.ts --write` and report settled rules below
-     `passing` grouped by intent, the gaps, what is waiting on the owner, and any stale citations.
+     `tests pass` grouped by intent, the gaps, what is waiting on the owner, and any stale citations.
    - **No** — offer to install it (see below), then run it.
 2. If the project's test runner can write results in a supported format, offer to run the tests
-   with that output and rerun the checker with `--results=` so `passing` is real. See _Test names
+   with that output and rerun the checker with `--results=` so `tests pass` is real. See _Test names
    by stack_ for the command.
 
 **Installing the script into a project:**
@@ -648,7 +654,7 @@ which test runner and where it runs from. Then suggest:
 - **Pre-commit hook** — `npx tsx scripts/ledger-check.ts`. No test run, so it is fast. Catches
   broken references and citations of rules that do not exist before they are committed.
 - **CI step** — run the tests with JSON output, then
-  `npx tsx scripts/ledger-check.ts --results=<results> --verify --require=tested`.
+  `npx tsx scripts/ledger-check.ts --results=<results> --verify --require=tests-written`.
   `--verify` fails when someone forgot to refresh the index. `--require` fails when a settled
   rule has lost its tests. CI never uses `--write` — it must not commit to the branch.
 
@@ -742,9 +748,9 @@ The document header states the format version. When opening a ledger with an old
 no version, say so and offer to upgrade it. Do not upgrade without asking. List the changes the
 upgrade would make before making them.
 
-Upgrading 2.x to 2.9.3 is mechanical; no rule changes:
+Upgrading 2.x to 2.10.0 is mechanical; no rule changes:
 
-1. Set `Format: business-rules-ledger 2.9.3`.
+1. Set `Format: business-rules-ledger 2.10.0`.
 2. Install `assets/business-rules-authoring.md` as `BUSINESS-RULES-AUTHORING.md` next to the ledger.
 3. Delete the `How to write rules (br-M)` section, and point the header line at
    `BUSINESS-RULES-AUTHORING.md` as the template does.
@@ -793,10 +799,14 @@ Upgrading 2.x to 2.9.3 is mechanical; no rule changes:
 15. From 2.9.0: reinstall the authoring file and the checker. The format is unchanged. If the
     checker reports errors for IDs in folders that hold other projects (examples, packages with
     ledgers of their own), offer an `Ignore:` line under `Format:` naming them.
+16. From 2.9.3 or earlier: reinstall the checker. The enforcement levels are renamed: `none` is
+    `unlinked`, `cited` is `linked`, `tested` is `tests written`, `passing` is `tests pass`. Run
+    the checker with `--write` to rewrite the index; until then it reads the old names. Change
+    `--require=` in CI and hooks to `tests-written` or `tests-pass`; the old names still work.
 
-Upgrading 1.x to 2.9.3, in stages the user can stop between:
+Upgrading 1.x to 2.10.0, in stages the user can stop between:
 
-1. Set `Format: business-rules-ledger 2.9.3`. Do steps 2 to 4, 6 and 8 to 15 of the 2.x upgrade above.
+1. Set `Format: business-rules-ledger 2.10.0`. Do steps 2 to 4, 6 and 8 to 16 of the 2.x upgrade above.
 2. Add the Intents and Glossary sections. Draft intents from the existing rules and their
    sources, mark them `observed`, and confirm them with the user one at a time.
 3. Add `kind:` and `serves:` to every rule. Propose both; ask only where unclear.
@@ -863,7 +873,7 @@ specs/rules/accounts.md
   observed entries. Ask that person, not the product owner, in intent review and grill sessions.
 - **Report by area.** `--area` shows every area with its owner and what is waiting; `--area=B`
   gives that area's report alone. Use it when working in one area or talking to its owner. An
-  area's CI job can run `--area=B --require=tested`, but keep one full run as well: intent
+  area's CI job can run `--area=B --require=tests-written`, but keep one full run as well: intent
   problems appear only there.
 
 The checker reports an error when a registered file is missing, when a rule sits in a file the
@@ -902,7 +912,7 @@ Use this order exactly:
 
 Source of truth. Code and tests conform to this document.
 How to read it, cite it in code and write it: [`BUSINESS-RULES-AUTHORING.md`](BUSINESS-RULES-AUTHORING.md).
-Format: business-rules-ledger 2.9.3
+Format: business-rules-ledger 2.10.0
 Ignore: [paths the checker never reads — optional]
 Scan: [paths it reads although it skips them by default — optional]
 
@@ -1031,6 +1041,7 @@ is now true. Do not write the new one and leave both standing.
 
 ## Changelog
 
+- **2.10.0** — 2026-10-25 — The enforcement levels are renamed so each says what is true: `none` is `unlinked`, `cited` is `linked`, `tested` is `tests written` (the tests exist; "tested" sounded as if they had run), and `passing` is `tests pass`. `--require` takes them hyphenated (`--require=tests-pass`), and the old names still work there and in an index not yet rewritten. The report counts settled rules highest level first and leaves out empty levels — `Settled rules: 37 — 30 tests pass, 4 tests written, 2 linked, 1 unlinked.`, or `Settled rules: 37, all tests pass.` — because "0 none, 0 cited, 0 tested" read as counts of failures. `--area` heads its column _Tests pass_. Upgrade step 16: run `--write` once and update `--require=` in CI.
 - **2.9.3** — 2026-10-25 — `Scan:` reads a copy of the checker only when it names that file, not its folder, so a project that scans the folder holding its copy never counts the checker's own citations. Those citations are new: the checker now cites the skill's own rules where it enforces them, and its header says they belong to the skill's ledger, not yours. In the skill's repo, every rule of that ledger is tested by name and passing, and it has a lite spec. Format unchanged.
 - **2.9.2** — 2026-10-25 — The skill's own ledger is through intent review: every intent and rule is settled. Two answers change the checker. It reads shell scripts (`.sh`, `.bash`), which can hold business logic; YAML stays out, so a quoted CI step name never counts as a test name. And a rule with a `gap:` whose tests all passed gets a warning, since either the gap is stale or the tests miss it; `--require` still counts the level, so `passing, gap` meets `--require=passing`, which the READMEs now say. Format unchanged.
 - **2.9.1** — 2026-10-22 — The skill keeps a ledger of its own (`specs/BUSINESS-RULES.md` in its repo: the checker's and the linter's rules, observed and waiting for intent review). Building it showed that a repo with examples could not scope the scan, so the master gains two optional header lines: `Ignore:` (paths never read, code or documents) and `Scan:` (paths read although skipped by default, such as copies of the checker). Ignore wins where both apply; a path that does not exist is a warning; the report names both. The checker's usage text uses `br-C01` as its example. Format unchanged.

@@ -2,7 +2,7 @@
 
 Source of truth. Code and tests conform to this document.
 How to read it, cite it in code and write it: [`BUSINESS-RULES-AUTHORING.md`](BUSINESS-RULES-AUTHORING.md).
-Format: business-rules-ledger 2.9.3
+Format: business-rules-ledger 2.10.0
 
 ---
 
@@ -117,22 +117,22 @@ Every rule, in this document or an area file. Built by `scripts/ledger-check.ts 
 
 | ID | Rule | Serves | Tags | Status | Enforcement |
 | --- | --- | --- | --- | --- | --- |
-| br-D01 | No code formatter processes `QUOTES.md`. | in-04 | `quotes` `content` | settled | none |
-| br-D02 | A quote entry in `QUOTES.md` is one or more `> text` lines, an optional `- Attribution` line right below them, under a `##` heading. Anything else is skipped without an error. | in-04 | `quotes` `format` | settled | cited, gap |
-| br-A01 | A browser may reuse a cached page for at most five minutes, and never past UTC midnight. After that it checks with the server, which sends the page again only if it changed. | in-02 | `caching` `performance` | settled | cited |
-| br-B01 | `QUOTES.md` is the canonical source of quotes. The fallback quote is the only quote in code. | in-04 | `quotes` `content` | settled | passing |
-| br-B02 | A quote's attribution line is optional. | in-04 | `quotes` | settled | passing |
-| br-B03 | When a quote is parsed, then its category is the text of the `##` heading above it. | in-04 | `quotes` `category` | settled | passing |
-| br-B04 | The quote of the day is chosen by the server from the current UTC date. It is the same for every visitor until the next UTC midnight. | in-02 | `quotes` `selection` | settled | passing |
-| br-B05 | When the pool is empty, then the fallback quote is shown. | in-05 | `quotes` `selection` | settled | passing |
-| br-B06 | The core experience sets no cookies, writes nothing to local storage, and runs no client-side tracking. | in-06 | `privacy` | settled | none |
-| br-B07 | When a page load has the query `new_quote=true`, then it shows a random quote other than the quote of the day, for that page load only. | in-02 | `quotes` `selection` | settled | passing |
-| br-U01 | The page displays exactly one quote. | in-01 | `display` | settled | none |
-| br-U06 | The page exposes no navigation to other quotes. | in-01 | `display` | settled | none |
-| br-U02 | The category label appears in the top-left of the quote card, in a smaller font size than the quote text. | in-01 | `display` `category` | settled | none |
-| br-U03 | A quote never overflows its card, at any viewport width. | in-03 | `display` `mobile` | settled | none |
-| br-U04 | The footer shows the number of quotes in the pool. | in-02 | `display` `footer` | settled | none |
-| br-U05 | When a quote has an attribution, then the attribution renders below the quote text. | in-03 | `display` `attribution` | settled | none |
+| br-D01 | No code formatter processes `QUOTES.md`. | in-04 | `quotes` `content` | settled | unlinked |
+| br-D02 | A quote entry in `QUOTES.md` is one or more `> text` lines, an optional `- Attribution` line right below them, under a `##` heading. Anything else is skipped without an error. | in-04 | `quotes` `format` | settled | linked, gap |
+| br-A01 | A browser may reuse a cached page for at most five minutes, and never past UTC midnight. After that it checks with the server, which sends the page again only if it changed. | in-02 | `caching` `performance` | settled | linked |
+| br-B01 | `QUOTES.md` is the canonical source of quotes. The fallback quote is the only quote in code. | in-04 | `quotes` `content` | settled | tests pass |
+| br-B02 | A quote's attribution line is optional. | in-04 | `quotes` | settled | tests pass |
+| br-B03 | When a quote is parsed, then its category is the text of the `##` heading above it. | in-04 | `quotes` `category` | settled | tests pass |
+| br-B04 | The quote of the day is chosen by the server from the current UTC date. It is the same for every visitor until the next UTC midnight. | in-02 | `quotes` `selection` | settled | tests pass |
+| br-B05 | When the pool is empty, then the fallback quote is shown. | in-05 | `quotes` `selection` | settled | tests pass |
+| br-B06 | The core experience sets no cookies, writes nothing to local storage, and runs no client-side tracking. | in-06 | `privacy` | settled | unlinked |
+| br-B07 | When a page load has the query `new_quote=true`, then it shows a random quote other than the quote of the day, for that page load only. | in-02 | `quotes` `selection` | settled | tests pass |
+| br-U01 | The page displays exactly one quote. | in-01 | `display` | settled | unlinked |
+| br-U06 | The page exposes no navigation to other quotes. | in-01 | `display` | settled | unlinked |
+| br-U02 | The category label appears in the top-left of the quote card, in a smaller font size than the quote text. | in-01 | `display` `category` | settled | unlinked |
+| br-U03 | A quote never overflows its card, at any viewport width. | in-03 | `display` `mobile` | settled | unlinked |
+| br-U04 | The footer shows the number of quotes in the pool. | in-02 | `display` `footer` | settled | unlinked |
+| br-U05 | When a quote has an attribution, then the attribution renders below the quote text. | in-03 | `display` `attribution` | settled | unlinked |
 
 ---
 
