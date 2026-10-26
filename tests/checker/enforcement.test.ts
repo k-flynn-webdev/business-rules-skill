@@ -1,6 +1,6 @@
 // How far each rule is enforced, from citations, test names and test results.
 import { describe, expect, test } from "vitest";
-import { LEDGER, P, ledger, level, repo, rule, run, testLine, vitestResults } from "./fixture";
+import { LEDGER, P, intent, ledger, level, repo, rule, run, testLine, vitestResults } from "./fixture";
 
 const cite = "// br_B01: here";
 const passedJson = (...ids: string[]) => vitestResults(ids.map((id) => [`${P}${id} holds`, "passed"]));
@@ -125,7 +125,7 @@ describe("--require", () => {
   test("br-C14.1 a settled rule below the level fails the run and is named", () => {
     const r = run(passingRepo(), "--require=tests-pass");
     expect(r.code).toBe(1);
-    expect(r.out).toContain(`settled rule(s) below "tests pass": ${P}B01`);
+    expect(r.out).toContain(`1 settled rule below "tests pass": ${P}B01`);
   });
 
   test("br-C14.2 every settled rule at the level passes the run", () => {
@@ -172,7 +172,7 @@ describe("a gap on a passing rule", () => {
   });
 });
 
-describe("the settled count", () => {
+describe("counts in the report", () => {
   test("br-C23.1 when every settled rule's tests pass, it says so", () => {
     const dir = repo({
       [LEDGER]: ledger({ rules: [rule("B01"), rule("B02")] }),
@@ -191,5 +191,70 @@ describe("the settled count", () => {
       "r.json": passedJson("B01.1"),
     });
     expect(run(dir, "--results=r.json").out).toContain("Settled rules: 3 — 1 tests pass, 1 tests written, 1 unlinked.\n");
+  });
+
+  test("br-C23.3 when every rule and intent is settled, the counts say so", () => {
+    const out = run(repo({ [LEDGER]: ledger({ rules: [rule("B01"), rule("B02")] }) })).out;
+    expect(out).toContain("Rules: 2, all settled. Intents: 1, all settled.\n");
+  });
+
+  test("br-C23.4 statuses are listed most decided first, with retired rules after", () => {
+    const dir = repo({
+      [LEDGER]: ledger({
+        intents: [intent("in-01"), intent("in-02", { status: "observed" })],
+        rules: [
+          rule("B01", { status: "observed" }),
+          rule("B02", { status: "open", questions: ["Which way?"] }),
+          rule("B03", { serves: "in-01, in-02" }),
+          rule("B04", { status: "retired" }),
+        ],
+      }),
+    });
+    expect(run(dir).out).toContain("Rules: 3 — 1 settled, 1 open, 1 observed; 1 retired. Intents: 2 — 1 settled, 1 observed.\n");
+  });
+
+  test("br-C23.5 one mention and one document read in the singular", () => {
+    const dir = repo({ [LEDGER]: ledger(), "src/a.ts": "// see br_B01", "specs/notes.md": "# Notes\n\nServes in-01.\n" });
+    const out = run(dir).out;
+    expect(out).toContain("1 mention of a rule in code is not a citation (no colon or @see), so it does not count.");
+    expect(out).toContain("Checked 1 other document beside the ledger for rule and intent IDs.");
+  });
+
+  test("br-C23.6 several mentions and documents read in the plural", () => {
+    const dir = repo({
+      [LEDGER]: ledger(),
+      "src/a.ts": "// see br_B01\n// and br_B01 again",
+      "specs/a.md": "# A\n\nServes in-01.\n",
+      "specs/b.md": "# B\n\nServes in-01.\n",
+    });
+    const out = run(dir).out;
+    expect(out).toContain("2 mentions of rules in code are not citations (no colon or @see), so they do not count.");
+    expect(out).toContain("Checked 2 other documents beside the ledger for rule and intent IDs.");
+  });
+
+  test("br-C23.7 the area list names only the kinds of message there are", () => {
+    const dir = repo({ [LEDGER]: ledger({ registry: [["B", "Business", "—"]], rules: [rule("B01", { tags: [] })] }) });
+    expect(run(dir, "--area").out).toContain("The ledger has 1 warning. Run without --area for the details.");
+  });
+
+  test("br-C23.8 tag counts leave out zero", () => {
+    const out = run(repo({ [LEDGER]: ledger() }), "--tag").out;
+    expect(out.trim().split("\n")).toContain("core: 1 rule");
+  });
+});
+
+describe("a run without results", () => {
+  const indexRow = [`| ${P}B01 | When it happens, then it holds. | in-01 | \`core\` | settled | tests pass |`];
+
+  test("br-C24.1 tests pass carried over from the index is said to be", () => {
+    const dir = repo({ [LEDGER]: ledger({ index: indexRow }), "src/a.ts": "// br_B01: here", "src/a.test.ts": testLine("B01.1") });
+    expect(run(dir).out).toContain(
+      "Settled rules: 1, all tests pass. Without --results, tests pass is carried over from the last run that had them.",
+    );
+  });
+
+  test("br-C24.2 with nothing carried over, it says no rule can reach tests pass", () => {
+    const dir = repo({ [LEDGER]: ledger(), "src/a.test.ts": testLine("B01.1") });
+    expect(run(dir).out).toContain("Settled rules: 1, all tests written. Without --results, no rule can reach tests pass.");
   });
 });

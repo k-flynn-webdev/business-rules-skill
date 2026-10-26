@@ -41,9 +41,10 @@ One run, in order:
    Without results, a rule already at tests pass stays there while its test names exist (br-C04).
 6. **Build the index** from the entries (br-C11). `--write` rewrites it (br-C13); `--verify`
    compares and fails on a difference (br-C12).
-7. **Report.** The settled rules counted by level, highest first (br-C23), those whose tests do
-   not pass yet, what waits on the owner oldest first (br-C15), and known gaps. `--require` sets
-   the exit code (br-C14).
+7. **Report.** Every count reads one way: the total first, most decided or highest first, no
+   zeros (br-C23). Without results, it says where tests pass came from (br-C24). Then the settled
+   rules whose tests do not pass yet, what waits on the owner oldest first (br-C15), and known
+   gaps. `--require` sets the exit code (br-C14).
 
 Instead of the full report, three modes print less: `--area` (br-C20), `--rule` (br-C21) and
 `--index` (br-C22).
@@ -55,7 +56,7 @@ Instead of the full report, three modes print less: `--area` (br-C20), `--rule` 
 | `readResults()` and the `*Outcomes()` readers | Test results, by format                | br-C05, br-C06, br-C07 |
 | `main()`, the level computation, `cellFor()` | Enforcement                             | br-C03, br-C04         |
 | `renderIndex()`                     | The index                                        | br-C11, br-C12, br-C13 |
-| `main()`, the report                | Counts, waiting list, gaps, exit code            | br-C14, br-C15, br-C23 |
+| `main()`, the report                | Counts, waiting list, gaps, exit code            | br-C14, br-C15, br-C23, br-C24 |
 | `areaLetters()`, `aboutArea()`      | Narrowing to areas                               | br-C20, br-C22         |
 
 ## Why these rules work together
@@ -119,3 +120,5 @@ run, without `--area`, still fails on any error anywhere.
   checker is read only when `Scan:` names its file (2.9.3).
 - 2026-10-25: the levels renamed unlinked, linked, tests written and tests pass, and the report
   counts settled rules highest first, without empty levels (2.10.0).
+- 2026-10-26: every count in the report reads the same way, and a run without results says
+  where tests pass came from (2.10.1).

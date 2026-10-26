@@ -159,7 +159,7 @@ describe("area files", () => {
       "specs/rules/data.md": `# Data\n\n${many("D", 51).join("\n---\n\n")}`,
     });
     const out = run(dir).out;
-    expect(out).toContain("Rules: 151 active");
+    expect(out).toContain("Rules: 151, all settled.");
     expect(out).not.toContain(crowded);
   });
 });

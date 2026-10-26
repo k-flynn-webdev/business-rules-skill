@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 /**
  * Checks a business rules ledger against the codebase, lints it, and computes each rule's enforcement.
- * Version 2.10.0 — ships with the business-rules-ledger skill. Reinstall from the skill to update.
+ * Version 2.10.1 — ships with the business-rules-ledger skill. Reinstall from the skill to update.
  *
  * Usage:
  *   npx tsx scripts/ledger-check.ts                         report only
@@ -59,6 +59,27 @@ const OLD_LEVELS: Record<string, Level> = {
   tested: "tests written",
   passing: "tests pass",
 };
+// br-C23: every count in the report uses a real plural, never "(s)".
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+// br-C23: a total, then its parts most decided first, leaving out any part that is zero, so a zero
+// never reads as a count of failures. One part that covers the total reads "all".
+function tally(total: number, parts: [string, number][]): string {
+  const shown = parts.filter(([, n]) => n > 0);
+  if (total === 0) return "0";
+  if (shown.length === 1 && shown[0][1] === total) return `${total}, all ${shown[0][0]}`;
+  return `${total} — ${shown.map(([k, n]) => `${n} ${k}`).join(", ")}`;
+}
+// Entries counted by status, most decided first. A status the checker does not know comes last.
+function statusParts(entries: { fields: Record<string, string> }[]): [string, number][] {
+  const order = ["settled", "open", "observed"];
+  const rank = (s: string) => (order.includes(s) ? order.indexOf(s) : order.length);
+  const n = new Map<string, number>();
+  for (const e of entries) {
+    const s = e.fields.status || "no status";
+    n.set(s, (n.get(s) ?? 0) + 1);
+  }
+  return [...n].sort(([a], [b]) => rank(a) - rank(b));
+}
 // "tests-pass", "tests pass" and "passing" all name the same level.
 const levelNamed = (word: string): Level | undefined => {
   const w = word.trim().toLowerCase().replace(/-/g, " ");
@@ -676,12 +697,12 @@ function listTags(rules: Rule[], intents: Intent[]): never {
     for (const [t, c] of [...counts].sort(
       (a, b) => b[1].rules + b[1].intents - (a[1].rules + a[1].intents) || a[0].localeCompare(b[0]),
     ))
-      out.push(`${t}: ${c.rules} rule(s), ${c.intents} intent(s)`);
+      out.push(`${t}: ${tagCounts(c.rules, c.intents)}`);
   } else {
     const name = wanted.replace(/^#/, "");
     const is = intents.filter((i) => i.tags.includes(name));
     const rs = live.filter((r) => r.tags.includes(name));
-    out.push(`Tag: ${name} — ${rs.length} rule(s), ${is.length} intent(s)`);
+    out.push(`Tag: ${name}${rs.length || is.length ? ` — ${tagCounts(rs.length, is.length)}` : ""}`);
     if (is.length) out.push("", "Intents:", ...is.map((i) => `  ${i.id}  ${line(i.statement)}`));
     if (rs.length)
       out.push("", "Rules:", ...rs.map((r) => `  ${r.id}  ${line(r.statement)}`));
@@ -691,10 +712,9 @@ function listTags(rules: Rule[], intents: Intent[]): never {
   process.exit(0);
 }
 
-function intentSummary(intents: Intent[]) {
-  const by = new Map<string, number>();
-  for (const i of intents) by.set(i.fields.status ?? "no status", (by.get(i.fields.status ?? "no status") ?? 0) + 1);
-  return by.size ? ` (${[...by].map(([s, n]) => `${n} ${s}`).join(", ")})` : "";
+// br-C23: "3 rules, 1 intent", leaving out a count of zero.
+function tagCounts(rules: number, intents: number) {
+  return [rules && plural(rules, "rule"), intents && plural(intents, "intent")].filter(Boolean).join(", ");
 }
 
 // The index, rebuilt from the rule entries: the master's rules, then each area file's, in document
@@ -1107,9 +1127,10 @@ function main() {
     const out = rows.map((r) =>
       r.map((v, c) => (c >= 4 ? v.padStart(width[c]) : v.padEnd(width[c]))).join("  ").trimEnd(),
     );
-    const count = (n: number, k: string) => `${n} ${k}${n === 1 ? "" : "s"}`;
+    // br-C23: only the kinds of message there are.
+    const found = [errors.length && plural(errors.length, "error"), warnings.length && plural(warnings.length, "warning")];
     if (errors.length || warnings.length)
-      out.push("", `The ledger has ${count(errors.length, "error")} and ${count(warnings.length, "warning")}. Run without --area for the details.`);
+      out.push("", `The ledger has ${found.filter(Boolean).join(" and ")}. Run without --area for the details.`);
     console.log(out.join("\n"));
     process.exit(0);
   }
@@ -1204,25 +1225,24 @@ function main() {
         : `Area: ${l}, not in the registry.`,
     );
   }
+  // br-C23: active rules by status, then retired ones; settled rules by level, highest first.
   out.push(
-    `Rules: ${active.length} active (${STATUSES.filter((s) => s !== "retired")
-      .map((s) => `${byStatus[s]} ${s}`)
-      .join(", ")}), ${byStatus.retired} retired.${AREA ? "" : ` Intents: ${intents.length}${intentSummary(intents)}.`}`,
+    `Rules: ${tally(active.length, statusParts(active))}${byStatus.retired ? `; ${byStatus.retired} retired` : ""}.` +
+      (AREA ? "" : ` Intents: ${tally(intents.length, statusParts(intents))}.`),
   );
-  // br-C23: highest level first, and only the levels some rule is at, so a zero never reads as a
-  // count of failures.
   const top = LEVELS[LEVELS.length - 1];
-  const spread = [...LEVELS].reverse().filter((l) => counts[l] > 0).map((l) => `${counts[l]} ${l}`);
-  const noResults = passed ? "" : " (no --results given)";
+  // br-C24: without results, say where "tests pass" came from, or that nothing can reach it.
+  const noResults =
+    passed || !settled.length
+      ? ""
+      : counts[top] > 0
+        ? " Without --results, tests pass is carried over from the last run that had them."
+        : " Without --results, no rule can reach tests pass."
   out.push(
-    settled.length === 0
-      ? "Settled rules: 0."
-      : counts[top] === settled.length
-        ? `Settled rules: ${settled.length}, all ${top}.${noResults}`
-        : `Settled rules: ${settled.length} — ${spread.join(", ")}.${noResults}`,
+    `Settled rules: ${tally(settled.length, [...LEVELS].reverse().map((l): [string, number] => [l, counts[l]]))}.${noResults}`,
   );
   if (docCount > 0)
-    out.push(`Other documents beside the ledger: ${docCount} checked for rule and intent IDs.`);
+    out.push(`Checked ${plural(docCount, "other document")} beside the ledger for rule and intent IDs.`);
   if (counts[top] > 0)
     out.push(
       "\"Tests pass\" means the named tests passed, not that they check the rule. Review the tests of attended rules.",
@@ -1232,7 +1252,9 @@ function main() {
     .reduce((n, [, w]) => n + w.length, 0);
   if (mentionCount > 0)
     out.push(
-      `${mentionCount} rule mention(s) in code not counted as citations (no colon or @see).`,
+      mentionCount === 1
+        ? "1 mention of a rule in code is not a citation (no colon or @see), so it does not count."
+        : `${mentionCount} mentions of rules in code are not citations (no colon or @see), so they do not count.`,
     );
 
   const todo = settled.filter((r) => !cellFor(r).startsWith("tests pass"));
@@ -1350,7 +1372,7 @@ function main() {
     );
     if (below.length) {
       console.log(
-        `\n${below.length} settled rule(s) below "${REQUIRE}": ${below.map((r) => r.id).join(", ")}`,
+        `\n${plural(below.length, "settled rule")} below "${REQUIRE}": ${below.map((r) => r.id).join(", ")}`,
       );
       exit = 1;
     }

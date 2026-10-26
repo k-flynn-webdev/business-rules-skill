@@ -2,7 +2,7 @@
 
 Source of truth. Code and tests conform to this document.
 How to read it, cite it in code and write it: [`BUSINESS-RULES-AUTHORING.md`](BUSINESS-RULES-AUTHORING.md).
-Format: business-rules-ledger 2.10.0
+Format: business-rules-ledger 2.10.1
 Ignore: examples/
 Scan: business-rules-ledger/assets/ledger-check.ts
 
@@ -160,7 +160,8 @@ Every rule, in this document or an area file. Built by `business-rules-ledger/as
 | br-C20 | When the checker runs with --area, then the report shows only those areas' rules and the messages about them, and counts the rest. The exit code follows what is shown. | in-05 | `scale` `area` | settled | tests pass |
 | br-C21 | When the checker runs with --rule and a rule ID, then it prints that rule instead of the report: its statement, status, enforcement, where its entry is, its citations, and its test names with where they are. | in-05 | `scale` | settled | tests pass |
 | br-C22 | When the checker runs with --index, then it prints the index as --write would build it, instead of the report. With --area, it prints only those areas' rows. | in-05 | `scale` `index` | settled | tests pass |
-| br-C23 | When the report counts the settled rules by enforcement, then it lists the levels highest first and leaves out any level no rule is at. When every settled rule is at tests pass, it says so. | in-01 | `enforcement` `report` | settled | tests pass |
+| br-C23 | When the report counts anything, then it gives the total first, lists statuses most decided first and levels highest first, and leaves out any count of zero. When one part covers the total it says all, and every count uses a real plural. | in-01 | `enforcement` `report` | settled | tests pass |
+| br-C24 | When the checker runs without a results file, then the settled count says where tests pass came from: carried over from the last run that had results, or out of reach. | in-01 | `enforcement` `report` | settled | tests pass |
 | br-L01 | When a rule's status is not observed, open, settled or retired, then the checker reports an error. | in-04 | `lint` | settled | tests pass |
 | br-L02 | When an active rule has no statement, no Fails if line, or a kind other than definition, invariant or behaviour, then the checker reports an error. | in-04 | `lint` | settled | tests pass |
 | br-L03 | When a rule's `serves:` names something that is not an intent, or its `given:` names something that is not a rule, then the checker reports an error. | in-04 | `lint` | settled | tests pass |
@@ -717,22 +718,50 @@ When the checker runs with --index, then it prints the index as --write would bu
 
 kind: behaviour | serves: in-01 | given: br-C03 | status: settled
 
-When the report counts the settled rules by enforcement, then it lists the levels highest first and leaves out any level no rule is at. When every settled rule is at tests pass, it says so.
+When the report counts anything, then it gives the total first, lists statuses most decided first and levels highest first, and leaves out any count of zero. When one part covers the total it says all, and every count uses a real plural.
 
 `#enforcement` `#report`
 
 **Examples**
 
-| Test | Settled rules at each level | Report line |
+| Test | Counted | Report line |
 | --- | --- | --- |
 | C23.1 | 2 at tests pass | Settled rules: 2, all tests pass. |
 | C23.2 | 1 at tests pass, 1 at tests written, 1 at unlinked | Settled rules: 3 — 1 tests pass, 1 tests written, 1 unlinked. |
+| C23.3 | 2 rules and 1 intent, all settled | Rules: 2, all settled. Intents: 1, all settled. |
+| C23.4 | rules 1 settled, 1 open, 1 observed, 1 retired; intents 1 settled, 1 observed | Rules: 3 — 1 settled, 1 open, 1 observed; 1 retired. Intents: 2 — 1 settled, 1 observed. |
+| C23.5 | 1 mention, 1 other document | 1 mention of a rule in code is not a citation …; Checked 1 other document … |
+| C23.6 | 2 mentions, 2 other documents | 2 mentions of rules in code are not citations …; Checked 2 other documents … |
+| C23.7 | --area, with 0 errors and 1 warning | The ledger has 1 warning. |
+| C23.8 | --tag, a tag on 1 rule and no intent | core: 1 rule |
 
-> Fails if a level with no rules is listed, or the levels are listed lowest first.
+> Fails if a count of zero is shown, a total comes after its parts, statuses or levels come in another order, or a count reads "(s)".
 
 **Source**
 
 - 2026-10-25, conversation. The report said "Settled enforcement: 0 none, 0 cited, 0 tested, 37 passing", and the owner read the zeros as counts of failures. Leading with the total and leaving out empty levels removes the misreading.
+- 2026-10-26, conversation. The owner asked to read "Rules: 38 active (0 observed, 0 open, 38 settled), 0 retired." again, and asked that every count in the report follow the same approach, so the report reads one way throughout.
+
+---
+
+## br-C24
+
+kind: behaviour | serves: in-01 | given: br-C04 | status: settled
+
+When the checker runs without a results file, then the settled count says where tests pass came from: carried over from the last run that had results, or out of reach.
+
+`#enforcement` `#report`
+
+**Tests**
+
+- C24.1 — Given a rule the index shows at tests pass, with its tests in code. When the checker runs with no results file. Then the count ends "Without --results, tests pass is carried over from the last run that had them."
+- C24.2 — Given no rule at tests pass in the index. When the checker runs with no results file. Then the count ends "Without --results, no rule can reach tests pass."
+
+> Fails if a run without results shows tests pass with no word on where it came from.
+
+**Source**
+
+- 2026-10-26, conversation. "Settled rules: 38, all tests pass. (no --results given)" read as a contradiction: how can tests pass with no results? Saying the level was carried over (br-C04) removes it.
 
 ---
 

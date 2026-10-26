@@ -2,12 +2,12 @@
 name: "business-rules-ledger"
 description: Capture product intents, business rules and their tests in a business rules ledger — a living, grep-able source of truth that code and tests conform to, with each rule's enforcement computed from the code. Use whenever the user wants to write down a rule, decision, invariant or intent ("add a rule", "write this down", "how should this behave", "what's the rule for X"); describes what the system should or shouldn't do while working on tickets, bugs or features; asks for a spec, requirements or acceptance criteria; wants a ledger built from a codebase; or mentions a rules ledger, intents, br- IDs or rule-driven development. Also use for "grill me" or settling open rules; "intent review" or confirming observed rules; "fresh eyes" or reviewing the ledger; asking which rules are enforced, what's left, or to check the ledger against the code; and "read me the rules", "audio" or "listen". Prefer this over a prose spec.
 metadata:
-  version: "2.10.0"
+  version: "2.10.1"
 ---
 
 # Business Rules Ledger
 
-Version 2.10.0. See the changelog at the end.
+Version 2.10.1. See the changelog at the end.
 
 A ledger of intents and the numbered rules that serve them. An intent says what a user should be
 able to do and what would feel broken. A rule is one decision, stated in one or two sentences,
@@ -610,8 +610,11 @@ review mode read the tests of any `attended: required` rule against its Fails if
 - with `--verify`, exits non-zero when the index differs from what `--write` would build
 - with `--require=tests-written` (or any level: `unlinked`, `linked`, `tests-written`,
   `tests-pass`), exits non-zero when a settled rule is below it
-- counts the settled rules by level, highest first, leaving out empty levels:
-  `Settled rules: 37 — 30 tests pass, 4 tests written, 2 linked, 1 unlinked.`
+- counts everything one way: the total first, statuses most decided first and levels highest
+  first, no zeros, and "all" when one part covers the total, so a zero never reads as a failure:
+  `Rules: 17 — 15 settled, 1 open, 1 observed; 1 retired.` and `Settled rules: 37, all tests
+  pass.` Without `--results` it says that tests pass was carried over from the last run that had
+  them
 
 It is a local script, like the audio script. It runs on the developer's machine and in the
 conversation. Nothing is hooked up unless the user chooses to.
@@ -748,9 +751,9 @@ The document header states the format version. When opening a ledger with an old
 no version, say so and offer to upgrade it. Do not upgrade without asking. List the changes the
 upgrade would make before making them.
 
-Upgrading 2.x to 2.10.0 is mechanical; no rule changes:
+Upgrading 2.x to 2.10.1 is mechanical; no rule changes:
 
-1. Set `Format: business-rules-ledger 2.10.0`.
+1. Set `Format: business-rules-ledger 2.10.1`.
 2. Install `assets/business-rules-authoring.md` as `BUSINESS-RULES-AUTHORING.md` next to the ledger.
 3. Delete the `How to write rules (br-M)` section, and point the header line at
    `BUSINESS-RULES-AUTHORING.md` as the template does.
@@ -804,9 +807,9 @@ Upgrading 2.x to 2.10.0 is mechanical; no rule changes:
     the checker with `--write` to rewrite the index; until then it reads the old names. Change
     `--require=` in CI and hooks to `tests-written` or `tests-pass`; the old names still work.
 
-Upgrading 1.x to 2.10.0, in stages the user can stop between:
+Upgrading 1.x to 2.10.1, in stages the user can stop between:
 
-1. Set `Format: business-rules-ledger 2.10.0`. Do steps 2 to 4, 6 and 8 to 16 of the 2.x upgrade above.
+1. Set `Format: business-rules-ledger 2.10.1`. Do steps 2 to 4, 6 and 8 to 16 of the 2.x upgrade above.
 2. Add the Intents and Glossary sections. Draft intents from the existing rules and their
    sources, mark them `observed`, and confirm them with the user one at a time.
 3. Add `kind:` and `serves:` to every rule. Propose both; ask only where unclear.
@@ -912,7 +915,7 @@ Use this order exactly:
 
 Source of truth. Code and tests conform to this document.
 How to read it, cite it in code and write it: [`BUSINESS-RULES-AUTHORING.md`](BUSINESS-RULES-AUTHORING.md).
-Format: business-rules-ledger 2.10.0
+Format: business-rules-ledger 2.10.1
 Ignore: [paths the checker never reads — optional]
 Scan: [paths it reads although it skips them by default — optional]
 
@@ -1041,6 +1044,7 @@ is now true. Do not write the new one and leave both standing.
 
 ## Changelog
 
+- **2.10.1** — 2026-10-26 — Every count in the report reads one way: the total first, statuses most decided first and levels highest first, no zeros, and "all" when one part covers the total. `Rules: 38 active (0 observed, 0 open, 38 settled), 0 retired.` is now `Rules: 38, all settled.`, and the intents, `--tag` counts and the `--area` footer follow suit. Plurals are real (`1 settled rule`, never `rule(s)`). Without `--results`, the settled count says tests pass was carried over from the last run that had them, instead of a bare "(no --results given)". Format unchanged.
 - **2.10.0** — 2026-10-25 — The enforcement levels are renamed so each says what is true: `none` is `unlinked`, `cited` is `linked`, `tested` is `tests written` (the tests exist; "tested" sounded as if they had run), and `passing` is `tests pass`. `--require` takes them hyphenated (`--require=tests-pass`), and the old names still work there and in an index not yet rewritten. The report counts settled rules highest level first and leaves out empty levels — `Settled rules: 37 — 30 tests pass, 4 tests written, 2 linked, 1 unlinked.`, or `Settled rules: 37, all tests pass.` — because "0 none, 0 cited, 0 tested" read as counts of failures. `--area` heads its column _Tests pass_. Upgrade step 16: run `--write` once and update `--require=` in CI.
 - **2.9.3** — 2026-10-25 — `Scan:` reads a copy of the checker only when it names that file, not its folder, so a project that scans the folder holding its copy never counts the checker's own citations. Those citations are new: the checker now cites the skill's own rules where it enforces them, and its header says they belong to the skill's ledger, not yours. In the skill's repo, every rule of that ledger is tested by name and passing, and it has a lite spec. Format unchanged.
 - **2.9.2** — 2026-10-25 — The skill's own ledger is through intent review: every intent and rule is settled. Two answers change the checker. It reads shell scripts (`.sh`, `.bash`), which can hold business logic; YAML stays out, so a quoted CI step name never counts as a test name. And a rule with a `gap:` whose tests all passed gets a warning, since either the gap is stale or the tests miss it; `--require` still counts the level, so `passing, gap` meets `--require=passing`, which the READMEs now say. Format unchanged.
