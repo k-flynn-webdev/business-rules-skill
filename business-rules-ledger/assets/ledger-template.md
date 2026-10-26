@@ -2,7 +2,7 @@
 
 Source of truth. Code and tests conform to this document.
 How to read it, cite it in code and write it: [`BUSINESS-RULES-AUTHORING.md`](BUSINESS-RULES-AUTHORING.md).
-Format: business-rules-ledger 2.9.3
+Format: business-rules-ledger 2.10.0
 
 ---
 
@@ -43,8 +43,8 @@ Every rule, in this document or an area file. Built by `scripts/ledger-check.ts 
 
 | ID     | Rule                                             | Serves | Tags        | Status  | Enforcement |
 | ------ | ------------------------------------------------ | ------ | ----------- | ------- | ----------- |
-| br-A01 | The rule's statement, copied from its entry.     | in-01  | `tag` `tag` | settled | none        |
-| br-A02 | A rule with unanswered questions attached to it. | in-01  | `tag`       | open    | none        |
+| br-A01 | The rule's statement, copied from its entry.     | in-01  | `tag` `tag` | settled | unlinked    |
+| br-A02 | A rule with unanswered questions attached to it. | in-01  | `tag`       | open    | unlinked    |
 
 ---
 

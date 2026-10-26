@@ -8,22 +8,22 @@ const withCode = (code: string, rules = [rule("B01"), rule("B02")], header: stri
 
 describe("citations", () => {
   test("br-C01.1 an ID followed by a colon cites the rule", () => {
-    expect(level(withCode("// br_B01: a colon cites"), "B01")).toBe("cited");
+    expect(level(withCode("// br_B01: a colon cites"), "B01")).toBe("linked");
   });
 
   test("br-C01.2 an ID after @see cites the rule", () => {
-    expect(level(withCode("/** @see br_B01 */"), "B01")).toBe("cited");
+    expect(level(withCode("/** @see br_B01 */"), "B01")).toBe("linked");
   });
 
   test("br-C01.3 a list ending in a colon cites every ID in it", () => {
     const dir = withCode("// br_B01, br_B02: both");
-    expect(level(dir, "B01")).toBe("cited");
-    expect(level(dir, "B02")).toBe("cited");
+    expect(level(dir, "B01")).toBe("linked");
+    expect(level(dir, "B02")).toBe("linked");
   });
 
   test("br-C01.4 an ID with no colon or @see is only a mention", () => {
     const dir = withCode("// explained in br_B01");
-    expect(level(dir, "B01")).toBe("none");
+    expect(level(dir, "B01")).toBe("unlinked");
     expect(run(dir, "--rule", `${P}B01`).out).toContain("Mentioned, not cited:\n  src/a.ts:1");
   });
 });
@@ -94,19 +94,19 @@ describe("which files are read", () => {
     repo({ [LEDGER]: ledger({ header }), [path]: path.endsWith(".ts") ? "// br_B01: here" : "# br_B01: here" });
 
   test("br-C16.1 dependency folders are not read", () => {
-    expect(level(citedIn("node_modules/x/index.ts"), "B01")).toBe("none");
+    expect(level(citedIn("node_modules/x/index.ts"), "B01")).toBe("unlinked");
   });
 
   test("br-C16.2 a copy of the checker is not read", () => {
-    expect(level(citedIn("tools/ledger-check.ts"), "B01")).toBe("none");
+    expect(level(citedIn("tools/ledger-check.ts"), "B01")).toBe("unlinked");
   });
 
   test("br-C16.3 shell scripts are read", () => {
-    expect(level(citedIn("scripts/build.sh"), "B01")).toBe("cited");
+    expect(level(citedIn("scripts/build.sh"), "B01")).toBe("linked");
   });
 
   test("br-C16.4 YAML is not read", () => {
-    expect(level(citedIn(".github/workflows/ci.yml"), "B01")).toBe("none");
+    expect(level(citedIn(".github/workflows/ci.yml"), "B01")).toBe("unlinked");
   });
 
   test("br-C17.1 an ignored path is never read", () => {
@@ -125,11 +125,11 @@ describe("which files are read", () => {
       "tools/x.ts": "// br_B01: here",
       "tools/ledger-check.ts": "// br_B01: here",
     });
-    expect(level(dir, "B01")).toBe("none");
+    expect(level(dir, "B01")).toBe("unlinked");
   });
 
   test("br-C18.1 Scan naming a copy of the checker reads it", () => {
-    expect(level(citedIn("tools/ledger-check.ts", ["Scan: tools/ledger-check.ts"]), "B01")).toBe("cited");
+    expect(level(citedIn("tools/ledger-check.ts", ["Scan: tools/ledger-check.ts"]), "B01")).toBe("linked");
   });
 
   test("br-C18.2 inside a skipped folder only the scanned path is read", () => {
@@ -138,12 +138,12 @@ describe("which files are read", () => {
       "dist/keep/k.ts": "// br_B01: kept",
       "dist/other/o.ts": "// br_B02: built",
     });
-    expect(level(dir, "B01")).toBe("cited");
-    expect(level(dir, "B02")).toBe("none");
+    expect(level(dir, "B01")).toBe("linked");
+    expect(level(dir, "B02")).toBe("unlinked");
   });
 
   test("br-C18.3 Scan naming the folder does not read a copy of the checker in it", () => {
-    expect(level(citedIn("tools/ledger-check.ts", ["Scan: tools/"]), "B01")).toBe("none");
+    expect(level(citedIn("tools/ledger-check.ts", ["Scan: tools/"]), "B01")).toBe("unlinked");
   });
 
   test("br-C19.1 a setting naming a path that does not exist is a warning", () => {

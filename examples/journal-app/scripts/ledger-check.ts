@@ -1,22 +1,23 @@
 #!/usr/bin/env tsx
 /**
  * Checks a business rules ledger against the codebase, lints it, and computes each rule's enforcement.
- * Version 2.9.3 — ships with the business-rules-ledger skill. Reinstall from the skill to update.
+ * Version 2.10.0 — ships with the business-rules-ledger skill. Reinstall from the skill to update.
  *
  * Usage:
  *   npx tsx scripts/ledger-check.ts                         report only
  *   npx tsx scripts/ledger-check.ts --write                 also rebuild the index from the rule entries
- *   npx tsx scripts/ledger-check.ts --results=results.json  test results decide "passing": Jest/Vitest JSON,
+ *   npx tsx scripts/ledger-check.ts --results=results.json  test results decide "tests pass": Jest/Vitest JSON,
  *                                                            TRX (dotnet test --logger trx) or JUnit XML.
  *                                                            Files or directories, comma-separated.
- *   npx tsx scripts/ledger-check.ts --require=tested        exit 1 if a settled rule is below this level
+ *   npx tsx scripts/ledger-check.ts --require=tests-pass    exit 1 if a settled rule is below this level:
+ *                                                            unlinked, linked, tests-written or tests-pass
  *   npx tsx scripts/ledger-check.ts --verify                exit 1 if the index is out of date
  *   npx tsx scripts/ledger-check.ts --waiting               list everything waiting on the owner, not only the oldest 10
  *   npx tsx scripts/ledger-check.ts --tag                   list every tag with how many rules and intents carry it
  *   npx tsx scripts/ledger-check.ts --tag=boilerplate       list the rules and intents carrying that tag
  *   npx tsx scripts/ledger-check.ts --rule=br-C01           one rule: its entry, enforcement, citations and tests
  *                                                            (--rule br-C01 and --rule C01 work too)
- *   npx tsx scripts/ledger-check.ts --area                  list the areas: file, owner, rules, settled, passing, waiting
+ *   npx tsx scripts/ledger-check.ts --area                  list the areas: file, owner, rules, settled, tests pass, waiting
  *   npx tsx scripts/ledger-check.ts --area=B                the report for one area (or B,U; a name; an area file).
  *                                                            Works with --waiting and --require; the index stays whole.
  *   npx tsx scripts/ledger-check.ts --index                 print the index as built from the rules (--area=B: its rows only)
@@ -32,7 +33,9 @@
  *                                        (dist/, build/ and the like). A copy of this checker is
  *                                        read only when its file is named: Scan: tools/ledger-check.ts
  *
- * Without --results, a rule already marked passing stays passing while its tests still exist.
+ * Enforcement, lowest to highest: unlinked (no code cites the rule), linked (code cites it), tests
+ * written (a test named after each of its test IDs exists) and tests pass (they ran and passed).
+ * Without --results, a rule already at tests pass stays there while its tests still exist.
  *
  * The br-C and br-L citations in this file refer to the skill's own ledger, specs/BUSINESS-RULES.md
  * in its repo. Your ledger does not need them: the checker never reads its own file.
@@ -47,8 +50,20 @@ import {
 } from "fs";
 import { join, relative, resolve, extname, dirname, sep } from "path";
 
-const LEVELS = ["none", "cited", "tested", "passing"] as const;
+const LEVELS = ["unlinked", "linked", "tests written", "tests pass"] as const;
 type Level = (typeof LEVELS)[number];
+// The names before 2.10.0, still read in --require and in an index not yet rewritten.
+const OLD_LEVELS: Record<string, Level> = {
+  none: "unlinked",
+  cited: "linked",
+  tested: "tests written",
+  passing: "tests pass",
+};
+// "tests-pass", "tests pass" and "passing" all name the same level.
+const levelNamed = (word: string): Level | undefined => {
+  const w = word.trim().toLowerCase().replace(/-/g, " ");
+  return OLD_LEVELS[w] ?? LEVELS.find((l) => l === w);
+};
 const KINDS = ["definition", "invariant", "behaviour"];
 const STATUSES = ["observed", "open", "settled", "retired"];
 const RULE_FIELDS = [
@@ -140,7 +155,8 @@ const LEDGER = resolve(
 );
 const SELF = resolve(process.argv[1] ?? "");
 const RESULTS = flag("results");
-const REQUIRE = flag("require") as Level | undefined;
+const REQUIRE_ARG = flag("require");
+const REQUIRE = REQUIRE_ARG === undefined ? undefined : levelNamed(REQUIRE_ARG);
 const WRITE = args.includes("--write");
 const VERIFY = args.includes("--verify");
 const ALL_WAITING = args.includes("--waiting");
@@ -156,8 +172,8 @@ if (ruleAt >= 0 && !ruleArg) {
   console.error("--rule needs a rule ID: --rule br-C01");
   process.exit(2);
 }
-if (REQUIRE && !LEVELS.includes(REQUIRE)) {
-  console.error(`--require must be one of: ${LEVELS.join(", ")}`);
+if (REQUIRE_ARG !== undefined && !REQUIRE) {
+  console.error(`--require must be one of: ${LEVELS.map((l) => l.replace(/ /g, "-")).join(", ")}`);
   process.exit(2);
 }
 
@@ -966,18 +982,18 @@ function main() {
     missingTests.set(r.id, missing);
 
     // br-C03: the level rises only with evidence: a citation, every test named, every test passed.
-    let level: Level = "none";
+    let level: Level = "unlinked";
     const allTested = r.tests.length > 0 && missing.length === 0;
     if (allTested && passed && r.tests.every((t) => passed.has(t)))
-      level = "passing";
-    else if (allTested) level = "tested";
-    else if (citations.has(bare)) level = "cited";
+      level = "tests pass";
+    else if (allTested) level = "tests written";
+    else if (citations.has(bare)) level = "linked";
     if (allTested && !citations.has(bare) && !retired)
-      warnings.push(`${r.id}: tested, but no code cites it.`);
+      warnings.push(`${r.id}: tests written, but no code cites it.`);
     // br-L15: a gap says the code breaks the rule, so tests that all pass contradict it.
-    if (level === "passing" && f.gap && status !== "observed")
+    if (level === "tests pass" && f.gap && status !== "observed")
       warnings.push(
-        `${r.id}: passing with a gap. Either the code now conforms (delete the gap) or the tests miss it.`,
+        `${r.id}: tests pass with a gap. Either the code now conforms (delete the gap) or the tests miss it.`,
       );
     levels.set(r.id, level);
 
@@ -1030,13 +1046,13 @@ function main() {
       "Recent changes is no longer part of the format (2.5.0). History lives in each rule's source lines and in git; remove the section.",
     );
 
-  // br-C04: without results, a rule already passing stays passing while its tests exist.
+  // br-C04: without results, a rule already at tests pass stays there while its tests exist.
   const cellFor = (r: Rule): string => {
     if (r.fields.status === "retired") return "—";
     let level = levels.get(r.id)!;
     const previous = previousEnforcement.get(r.id) ?? "";
-    if (!passed && level === "tested" && previous.startsWith("passing"))
-      level = "passing";
+    const wasPassing = levelNamed(previous.split(",")[0]) === "tests pass";
+    if (!passed && level === "tests written" && wasPassing) level = "tests pass";
     return r.fields.gap ? `${level}, gap` : level;
   };
 
@@ -1071,7 +1087,7 @@ function main() {
   if (LIST_AREAS) {
     const live = rules.filter((r) => !r.id.startsWith("br-M") && r.fields.status !== "retired");
     const letters = [...new Set([...areas.map((a) => a.letter), ...live.map((r) => r.id[3])])];
-    const rows = [["", "Area", "File", "Owner", "Rules", "Settled", "Passing", "Waiting"]];
+    const rows = [["", "Area", "File", "Owner", "Rules", "Settled", "Tests pass", "Waiting"]];
     for (const l of letters) {
       const a = areas.find((x) => x.letter === l);
       const mine = live.filter((r) => r.id[3] === l);
@@ -1083,7 +1099,7 @@ function main() {
         a?.owner || "—",
         String(mine.length),
         String(settled.length),
-        String(settled.filter((r) => cellFor(r).startsWith("passing")).length),
+        String(settled.filter((r) => cellFor(r).startsWith("tests pass")).length),
         String(mine.filter((r) => r.fields.status === "observed" || r.fields.status === "open").length),
       ]);
     }
@@ -1193,14 +1209,23 @@ function main() {
       .map((s) => `${byStatus[s]} ${s}`)
       .join(", ")}), ${byStatus.retired} retired.${AREA ? "" : ` Intents: ${intents.length}${intentSummary(intents)}.`}`,
   );
+  // br-C23: highest level first, and only the levels some rule is at, so a zero never reads as a
+  // count of failures.
+  const top = LEVELS[LEVELS.length - 1];
+  const spread = [...LEVELS].reverse().filter((l) => counts[l] > 0).map((l) => `${counts[l]} ${l}`);
+  const noResults = passed ? "" : " (no --results given)";
   out.push(
-    `Settled enforcement: ${LEVELS.map((l) => `${counts[l]} ${l}`).join(", ")}.${passed ? "" : " (no --results given)"}`,
+    settled.length === 0
+      ? "Settled rules: 0."
+      : counts[top] === settled.length
+        ? `Settled rules: ${settled.length}, all ${top}.${noResults}`
+        : `Settled rules: ${settled.length} — ${spread.join(", ")}.${noResults}`,
   );
   if (docCount > 0)
     out.push(`Other documents beside the ledger: ${docCount} checked for rule and intent IDs.`);
-  if (counts.passing > 0)
+  if (counts[top] > 0)
     out.push(
-      "Passing means the named tests passed, not that they check the rule. Review the tests of attended rules.",
+      "\"Tests pass\" means the named tests passed, not that they check the rule. Review the tests of attended rules.",
     );
   const mentionCount = [...mentions]
     .filter(([bare]) => inArea(`br-${bare}`))
@@ -1210,9 +1235,9 @@ function main() {
       `${mentionCount} rule mention(s) in code not counted as citations (no colon or @see).`,
     );
 
-  const todo = settled.filter((r) => !cellFor(r).startsWith("passing"));
+  const todo = settled.filter((r) => !cellFor(r).startsWith("tests pass"));
   if (todo.length) {
-    out.push("", "Settled rules not yet passing:");
+    out.push("", "Settled rules whose tests do not pass yet:");
     const byIntent = new Map<string, Rule[]>();
     for (const r of todo) {
       const key =

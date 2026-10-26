@@ -37,15 +37,15 @@ npm run ledger:audio     # a listening script of the intents and rules
 
 ```
 Rules: 17 active (1 observed, 1 open, 15 settled), 1 retired. Intents: 5 (5 settled).
-Settled enforcement: 5 none, 1 cited, 0 tested, 9 passing.
+Settled rules: 15 — 9 tests pass, 1 linked, 5 unlinked.
 Other documents beside the ledger: 2 checked for rule and intent IDs.
 
-Settled rules not yet passing:
+Settled rules whose tests do not pass yet:
   in-04
-    br-B07  cited — missing tests: B07.5
-    br-B16  none — missing tests: B16.1
+    br-B07  linked — missing tests: B07.5
+    br-B16  unlinked — missing tests: B16.1
   in-03
-    br-B14  none, gap — missing tests: B14.1, B14.2
+    br-B14  unlinked, gap — missing tests: B14.1, B14.2
   …
 Waiting on the owner (1 observed rule, 1 open rule), oldest first:
   br-U02  observed (since 2026-09-25, …)
@@ -56,7 +56,7 @@ Known gaps:
   br-D05  the admin track browser shows track text.
 ```
 
-That report is the work list. Every settled rule that is not `passing` is work left, every
+That report is the work list. Every settled rule not at `tests pass` is work left, every
 `gap` is a known way the code does not do what the rule says yet, and everything waiting on the
 owner is a decision nobody has made.
 
@@ -72,7 +72,7 @@ least one rule:
 | Index         | **Built by the checker** from the rule entries. Nobody edits it.                                                           |
 | br-B06        | A **definition** with **worked examples**. Each examples row is a test (`B06.1` …), tested in `src/streaks.test.ts`.      |
 | br-B02        | **Boundary tests**: just below, at and just above both limits, plus the emoji case that made "character" a glossary term. |
-| br-B07        | Example rows *and* a written test. B07.5 has no test in code yet, so the rule is `cited`, not `passing`.                  |
+| br-B07        | Example rows *and* a written test. B07.5 has no test in code yet, so the rule is `linked`, not `tests pass`.              |
 | br-B08        | A **decision table** and a **tunable number**: the threshold is config, the tests state 7 themselves (br-M31).            |
 | br-B05, A04   | **`attended: required`**: an agent must not change these without the owner present. The source says why.                 |
 | br-B14, D05   | **`gap:`**: the rule is settled, the code does not conform yet, and the ledger says so out loud.                          |
@@ -98,7 +98,7 @@ Take br-B02, track length:
    ["br-B02.7 100 emoji, 200 characters, are allowed", wave.repeat(100), true],
    ```
 4. **The checker** finds the citation and the eight named tests, reads the test results, and
-   writes `passing` into the index.
+   writes `tests pass` into the index.
 
 `git grep -n "br-B02"` now returns the rule, the code and every test, in one search.
 

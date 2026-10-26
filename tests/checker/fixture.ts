@@ -135,7 +135,7 @@ export const INDEX_HEAD = [
 
 /** A master ledger. With no rules given it holds br_B01, settled, with one test. */
 export function ledger(o: LedgerOptions = {}): string {
-  const out = ["# Business Rules Ledger — fixture", "", "Format: business-rules-ledger 2.9.3"];
+  const out = ["# Business Rules Ledger — fixture", "", "Format: business-rules-ledger 2.10.0"];
   out.push(...(o.header ?? []), "", "---", "", "## Intents", "");
   out.push(...(o.intents ?? [intent("in-01")]), "---", "", "## Index", "");
   out.push(...(o.indexBody ?? [...INDEX_HEAD, ...(o.index ?? [])]), "", "---", "");

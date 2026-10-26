@@ -35,14 +35,14 @@ the whole 6.4k-token ledger it was before the split. See _Area files_ in the ski
 Each owner can see their own areas. `npm run area` lists them:
 
 ```
-   Area       File                      Owner          Rules  Settled  Passing  Waiting
-B  Business   specs/rules/business.md   Product owner      7        7        6        0
-U  Interface  specs/rules/interface.md  Design lead        6        6        0        0
-A  API        the master                Product owner      1        1        0        0
-D  Data       the master                Product owner      2        2        0        0
+   Area       File                      Owner          Rules  Settled  Tests pass  Waiting
+B  Business   specs/rules/business.md   Product owner      7        7           6        0
+U  Interface  specs/rules/interface.md  Design lead        6        6           0        0
+A  API        the master                Product owner      1        1           0        0
+D  Data       the master                Product owner      2        2           0        0
 ```
 
-`npm run area U` is the design lead's report: the six Interface rules, the ones not yet passing,
+`npm run area U` is the design lead's report: the six Interface rules, the ones whose tests do not pass yet,
 and only the warnings about them. Errors and warnings from other areas are counted, not shown.
 `npx tsx scripts/ledger-check.ts --index --area=U` prints the six Interface rows of the index,
 about a third of the whole table.
@@ -66,13 +66,13 @@ npm run ledger:audio -- --area=U   # listen to one area: its rules and the inten
 ```
 Ledger: specs/BUSINESS-RULES.md and 2 area files: specs/rules/business.md, specs/rules/interface.md
 Rules: 16 active (0 observed, 0 open, 16 settled), 0 retired. Intents: 6 (5 observed, 1 settled).
-Settled enforcement: 8 none, 2 cited, 0 tested, 6 passing.
+Settled rules: 16 — 6 tests pass, 2 linked, 8 unlinked.
 Other documents beside the ledger: 1 checked for rule and intent IDs.
 
-Settled rules not yet passing:
+Settled rules whose tests do not pass yet:
   in-04
-    br-D01  none — missing tests: D01.1, D01.2
-    br-D02  cited — missing tests: D02.4
+    br-D01  unlinked — missing tests: D01.1, D01.2
+    br-D02  linked, gap — missing tests: D02.4
   …
 Waiting on the owner (5 observed intents), oldest first:
   in-01   observed (since 2026-10-01, …)
@@ -97,9 +97,9 @@ for. The checker lists the guesses under _Waiting on the owner_, oldest first, s
 there unnoticed. The next step is an intent review: half an hour with the owner, and every rule
 above it stands on something confirmed.
 
-**Eight rules are `none`.** Seven of them are about the page itself: one quote, no navigation,
+**Eight rules are `unlinked`.** Seven of them are about the page itself: one quote, no navigation,
 the category label smaller than the quote, no overflow on a phone, no cookies. This example has
-no UI, so nothing here cites them. The real app had none of these tested either. `none` says so
+no UI, so nothing here cites them. The real app had none of these tested either. `unlinked` says so
 honestly; a spec would have said nothing. A browser test that names U01.1, U03.2 and B06.1 would
 move them on. br-D01 is about editor and formatter settings, which a unit test cannot hold.
 
@@ -108,10 +108,10 @@ because a quote with no heading has no category. The parser keeps them anyway. A
 test even relied on it. Writing D02 as an examples table made the case visible: row D02.4 is the
 only row with no test in code, and the gap says why.
 
-**br-A01 is `cited`.** Rows A01.1 to A01.3 are tested in `src/cache.test.ts`. Tests A01.4 and
+**br-A01 is `linked`.** Rows A01.1 to A01.3 are tested in `src/cache.test.ts`. Tests A01.4 and
 A01.5 are about ETags and 304 responses, which the web framework handles. Its design note says
 so. The rule is still the owner's decision; until something tests it, the checker reports it as
-`cited` rather than `passing`.
+`linked` rather than `tests pass`.
 
 **`ARCHITECTURE.md` contradicts the ledger.** It is the spec from before the ledger. It says the
 quote follows the user's local date; br-B04 says UTC, decided later on purpose. It names

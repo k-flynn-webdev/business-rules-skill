@@ -2,7 +2,7 @@
 
 Source of truth. Code and tests conform to this document.
 How to read it, cite it in code and write it: [`BUSINESS-RULES-AUTHORING.md`](BUSINESS-RULES-AUTHORING.md).
-Format: business-rules-ledger 2.9.3
+Format: business-rules-ledger 2.10.0
 Ignore: examples/
 Scan: business-rules-ledger/assets/ledger-check.ts
 
@@ -23,7 +23,7 @@ A developer can see how far the code enforces each rule, computed from the code 
 `#enforcement`
 
 for: developers and agents building against a ledger
-broken when: the index shows a rule as passing while one of its named tests is missing or failed.
+broken when: the index shows a rule at tests pass while one of its named tests is missing or failed.
 non-goal: proving that a test checks its rule. Passing means the named tests exist and passed.
 status: settled
 
@@ -31,6 +31,7 @@ status: settled
 
 - 2026-10-22, observed: README.md "The bit that makes it stick" and SKILL.md _Enforcement_. Drafted from the docs; not confirmed.
 - 2026-10-23, intent review. Confirmed by the owner.
+- 2026-10-25, conversation. The levels are renamed unlinked, linked, tests written and tests pass: in the report, "0 none" read as a count of failures, and "tested" sounded as if the tests had run. The old names are still read (br-C04, br-C14).
 
 ### in-02
 
@@ -121,8 +122,8 @@ Each domain term, defined once. Rules use these terms exactly.
 | citation | A rule ID in code followed by a colon, or after `@see`. Marks where the code enforces the rule. | br-C01 |
 | mention | Any other rule ID in code. Never counts as enforcement. | br-C01 |
 | test name | A test ID with its br- prefix inside a string literal in code, such as `"br-C01.1 …"`. | br-C02 |
-| enforcement | How far the code has got with a rule: none, cited, tested or passing. | br-C03 |
-| results file | Test results the checker reads to decide passing: Jest or Vitest JSON, TRX, or JUnit XML. | br-C06 |
+| enforcement | How far the code has got with a rule: unlinked, linked, tests written or tests pass. | br-C03 |
+| results file | Test results the checker reads to decide tests pass: Jest or Vitest JSON, TRX, or JUnit XML. | br-C06 |
 | waiting entry | An observed intent, an observed rule or an open rule: something only the owner can close. | br-C15 |
 | scanned code | The code files the checker reads for citations, mentions and test names. | br-C16 |
 | master | The ledger file the checker is given. It holds the intents, glossary, index and registry. | br-L11 |
@@ -137,43 +138,44 @@ Every rule, in this document or an area file. Built by `business-rules-ledger/as
 
 | ID | Rule | Serves | Tags | Status | Enforcement |
 | --- | --- | --- | --- | --- | --- |
-| br-C01 | A citation is a rule ID in code followed by a colon, or preceded by `@see`. A list of rule IDs that ends in a colon cites every ID in it. | in-01 | `citation` `enforcement` | settled | passing |
-| br-C02 | A test name is a test ID with its br- prefix inside a single-line string literal in code. The same text anywhere else is a mention of the rule. | in-01 | `tests` `enforcement` | settled | passing |
-| br-C03 | A rule's enforcement is passing when every ledger test has a test name in code and all of them passed in the results file. Otherwise it is tested when every ledger test has a test name, cited when code cites the rule, and none when neither holds. | in-01 | `enforcement` | settled | passing |
-| br-C04 | When the checker runs without a results file, then a rule the index shows as passing stays passing while every one of its ledger tests still has a test name in code. | in-01 | `enforcement` `results` | settled | passing |
-| br-C05 | When any result for a test ID failed, then that test has not passed, even if other results for the same ID passed. | in-01 | `results` `enforcement` | settled | passing |
-| br-C06 | When the checker is given results, then it reads Jest or Vitest JSON, TRX and JUnit XML from files or directories, comma-separated. It tells the formats apart by their content, not their names. | in-01 | `results` `stacks` | settled | passing |
-| br-C07 | When a results file holds results but none is named with a br- test ID, then the checker warns and names the file. | in-01 | `results` `stacks` | settled | passing |
-| br-C08 | When a rule ID in scanned code names no rule in the ledger, then the checker reports an error, whether the ID is a citation, a mention or a test name. Authoring rule IDs (br-M) are exempt. | in-04 | `citation` `lint` | settled | passing |
-| br-C09 | When scanned code has a test name for a rule whose entry does not list that test, then the checker warns. | in-01 | `tests` | settled | passing |
-| br-C10 | When a string literal in scanned code holds a test ID without its br- prefix, and the ledger lists that test, then the checker warns that the test is not counted. | in-01 | `tests` | settled | passing |
-| br-C11 | The index has one row per rule except the authoring rules, retired rules included: the master's rules first, then each area file's in registry order. Every cell but Enforcement comes from the rule's entry. | in-02 | `index` | settled | passing |
-| br-C12 | When the checker runs with --verify and the index's cells differ from what --write would build, then it exits 1 and names each row that differs. Spacing and padding do not count as differences. | in-02 | `index` `ci` | settled | passing |
-| br-C13 | When the checker runs with --write and the index differs, then it rewrites the index table and leaves every other line of the master unchanged. | in-02 | `index` | settled | passing |
-| br-C14 | When the checker runs with --require at a level, then it exits 1 if any settled rule's enforcement is below that level. | in-01 | `enforcement` `ci` | settled | passing |
-| br-C15 | When the ledger has waiting entries, then the report lists them oldest first: an observed entry dated by its oldest source line, an open rule by its newest. It shows the 10 oldest unless --waiting is given. | in-03 | `waiting` | settled | passing |
-| br-C16 | Scanned code is every file under the repo root with a code extension, shell scripts included, except in dependency and build folders, the ledger itself, and any file named ledger-check.ts. | in-01 in-06 | `scan` | settled | passing |
-| br-C17 | When the master's header has an `Ignore:` line, then the checker reads no code and no document under those paths, even where `Scan:` names them. | in-06 | `scan` | settled | passing |
-| br-C18 | When the master's header has a `Scan:` line, then the checker also reads code under those paths that it skips by default. Inside a skipped folder only the named paths are read, and a copy of the checker only when the line names its file. | in-06 | `scan` | settled | passing |
-| br-C19 | When a path in an `Ignore:` or `Scan:` line does not exist, then the checker warns and names it. | in-06 | `scan` | settled | passing |
-| br-C20 | When the checker runs with --area, then the report shows only those areas' rules and the messages about them, and counts the rest. The exit code follows what is shown. | in-05 | `scale` `area` | settled | passing |
-| br-C21 | When the checker runs with --rule and a rule ID, then it prints that rule instead of the report: its statement, status, enforcement, where its entry is, its citations, and its test names with where they are. | in-05 | `scale` | settled | passing |
-| br-C22 | When the checker runs with --index, then it prints the index as --write would build it, instead of the report. With --area, it prints only those areas' rows. | in-05 | `scale` `index` | settled | passing |
-| br-L01 | When a rule's status is not observed, open, settled or retired, then the checker reports an error. | in-04 | `lint` | settled | passing |
-| br-L02 | When an active rule has no statement, no Fails if line, or a kind other than definition, invariant or behaviour, then the checker reports an error. | in-04 | `lint` | settled | passing |
-| br-L03 | When a rule's `serves:` names something that is not an intent, or its `given:` names something that is not a rule, then the checker reports an error. | in-04 | `lint` | settled | passing |
-| br-L04 | When an active rule serves no intent, lists no tests or has no tags, then the checker warns. | in-04 | `lint` | settled | passing |
-| br-L05 | When a rule's or an intent's tag is not lowercase letters, digits and hyphens starting with a letter, then the checker warns. | in-04 | `lint` `tags` | settled | passing |
-| br-L06 | When an active rule's statement is over two sentences and the rule has no `compound:` line, then the checker warns. | in-04 | `lint` `size` | settled | passing |
-| br-L07 | When a behaviour does not start with When, or a definition or invariant does, then the checker warns. | in-04 | `lint` `kind` | settled | passing |
-| br-L08 | When a settled rule still has open questions, or an open rule lists none, then the checker warns. | in-03 in-04 | `lint` `waiting` | settled | passing |
-| br-L09 | When an observed rule has a `gap:` line, then the checker warns. | in-04 | `lint` | settled | passing |
-| br-L10 | When at least 6 rules are active and more than a third of them are attended, then the checker warns. | in-04 | `lint` `attended` | settled | passing |
-| br-L11 | When an area file the registry names is missing, a rule sits in a file the registry does not give its area, or a rule ID is defined twice, then the checker reports an error. | in-04 in-05 | `lint` `area` | settled | passing |
-| br-L12 | When more than 150 active rules sit in the master, then the checker warns that areas should move to area files. | in-05 | `lint` `area` `scale` | settled | passing |
-| br-L13 | When an intent has no statement, the checker reports an error. When it has no `broken when:` line, or no rule serves it, the checker warns. | in-04 | `lint` `intents` | settled | passing |
-| br-L14 | When a document beside the ledger names a rule or intent that does not exist, then the checker warns on that line. Documents that name no intent share one warning, unless marked `<!-- ledger: not a spec -->`. | in-04 | `lint` `docs` | settled | passing |
-| br-L15 | When a rule with a gap is open or settled and every one of its tests passed in the results, then the checker warns. | in-01 in-04 | `lint` `enforcement` | settled | passing |
+| br-C01 | A citation is a rule ID in code followed by a colon, or preceded by `@see`. A list of rule IDs that ends in a colon cites every ID in it. | in-01 | `citation` `enforcement` | settled | tests pass |
+| br-C02 | A test name is a test ID with its br- prefix inside a single-line string literal in code. The same text anywhere else is a mention of the rule. | in-01 | `tests` `enforcement` | settled | tests pass |
+| br-C03 | A rule's enforcement is tests pass when every ledger test has a test name in code and all of them passed in the results file. Otherwise it is tests written when every ledger test has a test name, linked when code cites the rule, and unlinked when neither holds. | in-01 | `enforcement` | settled | tests pass |
+| br-C04 | When the checker runs without a results file, then a rule the index shows at tests pass stays there while every one of its ledger tests still has a test name in code. An index written before 2.10.0 says passing for the same level. | in-01 | `enforcement` `results` | settled | tests pass |
+| br-C05 | When any result for a test ID failed, then that test has not passed, even if other results for the same ID passed. | in-01 | `results` `enforcement` | settled | tests pass |
+| br-C06 | When the checker is given results, then it reads Jest or Vitest JSON, TRX and JUnit XML from files or directories, comma-separated. It tells the formats apart by their content, not their names. | in-01 | `results` `stacks` | settled | tests pass |
+| br-C07 | When a results file holds results but none is named with a br- test ID, then the checker warns and names the file. | in-01 | `results` `stacks` | settled | tests pass |
+| br-C08 | When a rule ID in scanned code names no rule in the ledger, then the checker reports an error, whether the ID is a citation, a mention or a test name. Authoring rule IDs (br-M) are exempt. | in-04 | `citation` `lint` | settled | tests pass |
+| br-C09 | When scanned code has a test name for a rule whose entry does not list that test, then the checker warns. | in-01 | `tests` | settled | tests pass |
+| br-C10 | When a string literal in scanned code holds a test ID without its br- prefix, and the ledger lists that test, then the checker warns that the test is not counted. | in-01 | `tests` | settled | tests pass |
+| br-C11 | The index has one row per rule except the authoring rules, retired rules included: the master's rules first, then each area file's in registry order. Every cell but Enforcement comes from the rule's entry. | in-02 | `index` | settled | tests pass |
+| br-C12 | When the checker runs with --verify and the index's cells differ from what --write would build, then it exits 1 and names each row that differs. Spacing and padding do not count as differences. | in-02 | `index` `ci` | settled | tests pass |
+| br-C13 | When the checker runs with --write and the index differs, then it rewrites the index table and leaves every other line of the master unchanged. | in-02 | `index` | settled | tests pass |
+| br-C14 | When the checker runs with --require at a level, then it exits 1 if any settled rule's enforcement is below that level. The level is named with hyphens (tests-pass) or by its name before 2.10.0 (passing). | in-01 | `enforcement` `ci` | settled | tests pass |
+| br-C15 | When the ledger has waiting entries, then the report lists them oldest first: an observed entry dated by its oldest source line, an open rule by its newest. It shows the 10 oldest unless --waiting is given. | in-03 | `waiting` | settled | tests pass |
+| br-C16 | Scanned code is every file under the repo root with a code extension, shell scripts included, except in dependency and build folders, the ledger itself, and any file named ledger-check.ts. | in-01 in-06 | `scan` | settled | tests pass |
+| br-C17 | When the master's header has an `Ignore:` line, then the checker reads no code and no document under those paths, even where `Scan:` names them. | in-06 | `scan` | settled | tests pass |
+| br-C18 | When the master's header has a `Scan:` line, then the checker also reads code under those paths that it skips by default. Inside a skipped folder only the named paths are read, and a copy of the checker only when the line names its file. | in-06 | `scan` | settled | tests pass |
+| br-C19 | When a path in an `Ignore:` or `Scan:` line does not exist, then the checker warns and names it. | in-06 | `scan` | settled | tests pass |
+| br-C20 | When the checker runs with --area, then the report shows only those areas' rules and the messages about them, and counts the rest. The exit code follows what is shown. | in-05 | `scale` `area` | settled | tests pass |
+| br-C21 | When the checker runs with --rule and a rule ID, then it prints that rule instead of the report: its statement, status, enforcement, where its entry is, its citations, and its test names with where they are. | in-05 | `scale` | settled | tests pass |
+| br-C22 | When the checker runs with --index, then it prints the index as --write would build it, instead of the report. With --area, it prints only those areas' rows. | in-05 | `scale` `index` | settled | tests pass |
+| br-C23 | When the report counts the settled rules by enforcement, then it lists the levels highest first and leaves out any level no rule is at. When every settled rule is at tests pass, it says so. | in-01 | `enforcement` `report` | settled | tests pass |
+| br-L01 | When a rule's status is not observed, open, settled or retired, then the checker reports an error. | in-04 | `lint` | settled | tests pass |
+| br-L02 | When an active rule has no statement, no Fails if line, or a kind other than definition, invariant or behaviour, then the checker reports an error. | in-04 | `lint` | settled | tests pass |
+| br-L03 | When a rule's `serves:` names something that is not an intent, or its `given:` names something that is not a rule, then the checker reports an error. | in-04 | `lint` | settled | tests pass |
+| br-L04 | When an active rule serves no intent, lists no tests or has no tags, then the checker warns. | in-04 | `lint` | settled | tests pass |
+| br-L05 | When a rule's or an intent's tag is not lowercase letters, digits and hyphens starting with a letter, then the checker warns. | in-04 | `lint` `tags` | settled | tests pass |
+| br-L06 | When an active rule's statement is over two sentences and the rule has no `compound:` line, then the checker warns. | in-04 | `lint` `size` | settled | tests pass |
+| br-L07 | When a behaviour does not start with When, or a definition or invariant does, then the checker warns. | in-04 | `lint` `kind` | settled | tests pass |
+| br-L08 | When a settled rule still has open questions, or an open rule lists none, then the checker warns. | in-03 in-04 | `lint` `waiting` | settled | tests pass |
+| br-L09 | When an observed rule has a `gap:` line, then the checker warns. | in-04 | `lint` | settled | tests pass |
+| br-L10 | When at least 6 rules are active and more than a third of them are attended, then the checker warns. | in-04 | `lint` `attended` | settled | tests pass |
+| br-L11 | When an area file the registry names is missing, a rule sits in a file the registry does not give its area, or a rule ID is defined twice, then the checker reports an error. | in-04 in-05 | `lint` `area` | settled | tests pass |
+| br-L12 | When more than 150 active rules sit in the master, then the checker warns that areas should move to area files. | in-05 | `lint` `area` `scale` | settled | tests pass |
+| br-L13 | When an intent has no statement, the checker reports an error. When it has no `broken when:` line, or no rule serves it, the checker warns. | in-04 | `lint` `intents` | settled | tests pass |
+| br-L14 | When a document beside the ledger names a rule or intent that does not exist, then the checker warns on that line. Documents that name no intent share one warning, unless marked `<!-- ledger: not a spec -->`. | in-04 | `lint` `docs` | settled | tests pass |
+| br-L15 | When a rule with a gap is open or settled and every one of its tests passed in the results, then the checker warns. | in-01 in-04 | `lint` `enforcement` | settled | tests pass |
 
 ---
 
@@ -247,7 +249,7 @@ A test name is a test ID with its br- prefix inside a single-line string literal
 
 kind: definition | serves: in-01 | status: settled
 
-A rule's enforcement is passing when every ledger test has a test name in code and all of them passed in the results file. Otherwise it is tested when every ledger test has a test name, cited when code cites the rule, and none when neither holds.
+A rule's enforcement is tests pass when every ledger test has a test name in code and all of them passed in the results file. Otherwise it is tests written when every ledger test has a test name, linked when code cites the rule, and unlinked when neither holds.
 
 `#enforcement`
 
@@ -255,12 +257,12 @@ A rule's enforcement is passing when every ledger test has a test name in code a
 
 | Test | Every ledger test named in code? | Results | Cited? | Enforcement |
 | --- | --- | --- | --- | --- |
-| C03.1 | no | — | no | none |
-| C03.2 | no | — | yes | cited |
-| C03.3 | yes | none given | no | tested |
-| C03.4 | yes | all passed | yes | passing |
-| C03.5 | yes | one failed | yes | tested |
-| C03.6 | the rule lists no tests | — | yes | cited |
+| C03.1 | no | — | no | unlinked |
+| C03.2 | no | — | yes | linked |
+| C03.3 | yes | none given | no | tests written |
+| C03.4 | yes | all passed | yes | tests pass |
+| C03.5 | yes | one failed | yes | tests written |
+| C03.6 | the rule lists no tests | — | yes | linked |
 
 > Fails if a rule is shown at a level its tests, results and citations do not reach.
 
@@ -268,6 +270,7 @@ A rule's enforcement is passing when every ledger test has a test name in code a
 
 - 2026-10-22, observed: `ledger-check.ts` main(), the level computation. A gap adds `, gap` and a retired rule shows `—`. suspect: tested does not need a citation; a tested rule that nothing cites only gets a warning.
 - 2026-10-25, intent review. Intended: the test is the proof. A citation marks where the rule lives, so a missing one earns a warning, not a lower level.
+- 2026-10-25, conversation. The levels are renamed unlinked, linked, tests written and tests pass: in the report, "0 none" read as a count of failures, and "tested" sounded as if the tests had run. The old names are still read (br-C04, br-C14).
 
 ---
 
@@ -275,21 +278,23 @@ A rule's enforcement is passing when every ledger test has a test name in code a
 
 kind: behaviour | serves: in-01 | given: br-C03 | status: settled
 
-When the checker runs without a results file, then a rule the index shows as passing stays passing while every one of its ledger tests still has a test name in code.
+When the checker runs without a results file, then a rule the index shows at tests pass stays there while every one of its ledger tests still has a test name in code. An index written before 2.10.0 says passing for the same level.
 
 `#enforcement` `#results`
 
 **Tests**
 
-- C04.1 — Given the index shows a rule as passing and all its test names exist. When the checker runs with no results file. Then the rule is still passing.
-- C04.2 — Given the index shows a rule as passing and one of its test names is gone. When the checker runs with no results file. Then the rule is below passing.
+- C04.1 — Given the index shows a rule at tests pass and all its test names exist. When the checker runs with no results file. Then the rule is still at tests pass.
+- C04.2 — Given the index shows a rule at tests pass and one of its test names is gone. When the checker runs with no results file. Then the rule is below tests pass.
+- C04.3 — Given the index shows a rule as passing, from before 2.10.0, and all its test names exist. When the checker runs with no results file. Then the rule is at tests pass.
 
-> Fails if a run without results drops a passing rule whose tests all still exist, or keeps one passing after a test name is removed.
+> Fails if a run without results drops a rule at tests pass whose tests all still exist, or keeps one there after a test name is removed.
 
 **Source**
 
 - 2026-10-22, observed: `ledger-check.ts` cellFor(), which reads the previous Enforcement column. suspect: a test that has started failing since the last run with results still shows passing.
 - 2026-10-25, intent review. Intended: a quick local run without results should not drop every rule to tested. CI always runs with results, so a newly failing test is caught there.
+- 2026-10-25, conversation. The levels are renamed unlinked, linked, tests written and tests pass: in the report, "0 none" read as a count of failures, and "tested" sounded as if the tests had run. The old names are still read (br-C04, br-C14).
 
 ---
 
@@ -500,15 +505,17 @@ When the checker runs with --write and the index differs, then it rewrites the i
 
 kind: behaviour | serves: in-01 | given: br-C03 | status: settled
 
-When the checker runs with --require at a level, then it exits 1 if any settled rule's enforcement is below that level.
+When the checker runs with --require at a level, then it exits 1 if any settled rule's enforcement is below that level. The level is named with hyphens (tests-pass) or by its name before 2.10.0 (passing).
 
 `#enforcement` `#ci`
 
 **Tests**
 
-- C14.1 — Given a settled rule at tested. When the checker runs with --require=passing. Then it exits 1 and names the rule.
-- C14.2 — Given every settled rule at passing. When the checker runs with --require=passing. Then it exits 0.
-- C14.3 — Given an open rule at none and every settled rule at passing. When the checker runs with --require=tested. Then it exits 0.
+- C14.1 — Given a settled rule at tests written. When the checker runs with --require=tests-pass. Then it exits 1 and names the rule.
+- C14.2 — Given every settled rule at tests pass. When the checker runs with --require=tests-pass. Then it exits 0.
+- C14.3 — Given an open rule at unlinked and every settled rule at tests pass. When the checker runs with --require=tests-written. Then it exits 0.
+- C14.4 — Given a settled rule at tests written, then at tests pass. When the checker runs with --require=passing. Then it exits 1, then 0.
+- C14.5 — Given any ledger. When the checker runs with --require=done. Then it exits 2 and lists the four levels.
 
 > Fails if a settled rule below the required level passes the run, or a rule that is not settled fails it.
 
@@ -516,6 +523,7 @@ When the checker runs with --require at a level, then it exits 1 if any settled 
 
 - 2026-10-22, observed: `ledger-check.ts` main(), REQUIRE. suspect: a rule with a gap counts at its level, so `passing, gap` meets --require=passing.
 - 2026-10-23, intent review. Intended: --require counts the level, and a gap does not lower it. The gap stays visible under Known gaps, and br-L15 warns when a rule passes with one. The README says so where it explains --require.
+- 2026-10-25, conversation. The levels are renamed unlinked, linked, tests written and tests pass: in the report, "0 none" read as a count of failures, and "tested" sounded as if the tests had run. The old names are still read (br-C04, br-C14).
 
 ---
 
@@ -702,6 +710,29 @@ When the checker runs with --index, then it prints the index as --write would bu
 
 - 2026-10-22, observed: `ledger-check.ts` main(), PRINT_INDEX. Built in PR #7, 2026-10-21.
 - 2026-10-25, intent review. Intended, confirmed with the rules for reading less: each lets a reader load one rule or one area instead of the whole ledger.
+
+---
+
+## br-C23
+
+kind: behaviour | serves: in-01 | given: br-C03 | status: settled
+
+When the report counts the settled rules by enforcement, then it lists the levels highest first and leaves out any level no rule is at. When every settled rule is at tests pass, it says so.
+
+`#enforcement` `#report`
+
+**Examples**
+
+| Test | Settled rules at each level | Report line |
+| --- | --- | --- |
+| C23.1 | 2 at tests pass | Settled rules: 2, all tests pass. |
+| C23.2 | 1 at tests pass, 1 at tests written, 1 at unlinked | Settled rules: 3 — 1 tests pass, 1 tests written, 1 unlinked. |
+
+> Fails if a level with no rules is listed, or the levels are listed lowest first.
+
+**Source**
+
+- 2026-10-25, conversation. The report said "Settled enforcement: 0 none, 0 cited, 0 tested, 37 passing", and the owner read the zeros as counts of failures. Leading with the total and leaving out empty levels removes the misreading.
 
 ---
 
@@ -1042,7 +1073,7 @@ When a rule with a gap is open or settled and every one of its tests passed in t
 **Tests**
 
 - L15.1 — Given a settled rule with a gap: line whose tests all passed in the results. When the checker runs. Then it warns that the gap is stale or the tests miss it.
-- L15.2 — Given a settled rule with a gap: line at tested, with no results file. When the checker runs. Then it does not warn.
+- L15.2 — Given a settled rule with a gap: line at tests written, with no results file. When the checker runs. Then it does not warn.
 - L15.3 — Given a settled rule with no gap whose tests all passed. When the checker runs. Then it does not warn.
 
 > Fails if a rule passes with a gap and nothing is said, or a rule without a passing result is warned.

@@ -2,7 +2,7 @@
 
 Source of truth. Code and tests conform to this document.
 How to read it, cite it in code and write it: [`BUSINESS-RULES-AUTHORING.md`](BUSINESS-RULES-AUTHORING.md).
-Format: business-rules-ledger 2.9.3
+Format: business-rules-ledger 2.10.0
 
 ---
 
@@ -110,24 +110,24 @@ Every rule, in this document or an area file. Built by `scripts/ledger-check.ts 
 
 | ID | Rule | Serves | Tags | Status | Enforcement |
 | --- | --- | --- | --- | --- | --- |
-| br-B01 | A track is a plain-text entry owned by a single user. The owner is the signed-in user who created it. | in-02 | `track` `core` | settled | passing |
-| br-B02 | Track text is between 2 and 200 characters, counted after trimming. | in-01 | `track` `validation` | settled | passing |
-| br-B05 | When a user deletes a track, then its deleted_at is set and the track stays in the database. | in-03 | `track` `delete` | settled, attended | passing |
-| br-B06 | A streak is a run of consecutive days, each with at least one non-deleted track. Its length is the number of days in the run. | in-04 | `streak` | settled | passing |
-| br-B07 | The current streak is the length of the open streak, or 0. A streak stays open while its most recent day is today or yesterday. | in-04 | `streak` | settled | cited |
-| br-B08 | When a track is created and the current streak counting it is at least 7, then the streak notification shows. | in-04 | `streak` `notification` | settled | passing |
-| br-B09 | The best streak is the length of the longest streak in the user's non-deleted tracks. A deletion can lower it. | in-04 | `streak` | settled | passing |
-| br-B10 | The anniversary card shows up to 2 non-deleted tracks within ±3 days of the anniversary date, closest first, ties to the track created first. | in-05 | `anniversary` | settled | passing |
+| br-B01 | A track is a plain-text entry owned by a single user. The owner is the signed-in user who created it. | in-02 | `track` `core` | settled | tests pass |
+| br-B02 | Track text is between 2 and 200 characters, counted after trimming. | in-01 | `track` `validation` | settled | tests pass |
+| br-B05 | When a user deletes a track, then its deleted_at is set and the track stays in the database. | in-03 | `track` `delete` | settled, attended | tests pass |
+| br-B06 | A streak is a run of consecutive days, each with at least one non-deleted track. Its length is the number of days in the run. | in-04 | `streak` | settled | tests pass |
+| br-B07 | The current streak is the length of the open streak, or 0. A streak stays open while its most recent day is today or yesterday. | in-04 | `streak` | settled | linked |
+| br-B08 | When a track is created and the current streak counting it is at least 7, then the streak notification shows. | in-04 | `streak` `notification` | settled | tests pass |
+| br-B09 | The best streak is the length of the longest streak in the user's non-deleted tracks. A deletion can lower it. | in-04 | `streak` | settled | tests pass |
+| br-B10 | The anniversary card shows up to 2 non-deleted tracks within ±3 days of the anniversary date, closest first, ties to the track created first. | in-05 | `anniversary` | settled | tests pass |
 | br-B11 | When a track is created and no active Streak exists, then open a new Streak with start_date = today UTC. | in-04 | `streak` | retired | — |
-| br-B14 | When a user emails asking for erasure, then their account and every track, deleted ones too, are removed within one month. | in-03 | `delete` `privacy` | settled, attended | none, gap |
-| br-B16 | Stored streak data always equals br-B06 recomputed from the user's non-deleted tracks. | in-04 | `streak` `data` | settled | none |
-| br-B21 | When a track is created or edited, then leading and trailing whitespace is removed; empty text is rejected. | in-01 | `track` `validation` | settled | passing |
-| br-B22 | When a user deletes a track by mistake, then they can restore it. | in-03 | `track` `delete` | open | none |
-| br-U02 | The feed shows 20 tracks per page. | in-03 | `feed` | observed | none |
-| br-U05 | Track text is always displayed as plain text, never rendered as HTML. | in-02 in-03 | `track` `security` | settled | none |
-| br-A04 | The API identifies the user only from their session, never from ids sent in the request. | in-02 | `api` `security` `auth` | settled, attended | none |
-| br-D03 | A track's day is its local_date: the user's calendar date, in their time zone, when the track was created. It never changes. | in-04 in-05 | `data` `time` | settled | passing |
-| br-D05 | No log, error report or admin screen shows track text. | in-02 | `privacy` `security` | settled | none, gap |
+| br-B14 | When a user emails asking for erasure, then their account and every track, deleted ones too, are removed within one month. | in-03 | `delete` `privacy` | settled, attended | unlinked, gap |
+| br-B16 | Stored streak data always equals br-B06 recomputed from the user's non-deleted tracks. | in-04 | `streak` `data` | settled | unlinked |
+| br-B21 | When a track is created or edited, then leading and trailing whitespace is removed; empty text is rejected. | in-01 | `track` `validation` | settled | tests pass |
+| br-B22 | When a user deletes a track by mistake, then they can restore it. | in-03 | `track` `delete` | open | unlinked |
+| br-U02 | The feed shows 20 tracks per page. | in-03 | `feed` | observed | unlinked |
+| br-U05 | Track text is always displayed as plain text, never rendered as HTML. | in-02 in-03 | `track` `security` | settled | unlinked |
+| br-A04 | The API identifies the user only from their session, never from ids sent in the request. | in-02 | `api` `security` `auth` | settled, attended | unlinked |
+| br-D03 | A track's day is its local_date: the user's calendar date, in their time zone, when the track was created. It never changes. | in-04 in-05 | `data` `time` | settled | tests pass |
+| br-D05 | No log, error report or admin screen shows track text. | in-02 | `privacy` `security` | settled | unlinked, gap |
 
 
 ---
