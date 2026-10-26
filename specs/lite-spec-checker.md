@@ -43,8 +43,8 @@ One run, in order:
    compares and fails on a difference (br-C12).
 7. **Report.** Every count reads one way: the total first, most decided or highest first, no
    zeros (br-C23). Without results, it says where tests pass came from (br-C24). Then the settled
-   rules whose tests do not pass yet, what waits on the owner oldest first (br-C15), and known gaps. `--require` sets
-   the exit code (br-C14).
+   rules whose tests do not pass yet, what waits on the owner oldest first (br-C15), and known
+   gaps. `--require` sets the exit code (br-C14).
 
 Instead of the full report, three modes print less: `--area` (br-C20), `--rule` (br-C21) and
 `--index` (br-C22).
