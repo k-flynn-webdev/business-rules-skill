@@ -2,7 +2,7 @@
 
 Source of truth. Code and tests conform to this document.
 How to read it, cite it in code and write it: [`BUSINESS-RULES-AUTHORING.md`](BUSINESS-RULES-AUTHORING.md).
-Format: business-rules-ledger 2.10.0
+Format: business-rules-ledger 2.10.1
 
 ---
 

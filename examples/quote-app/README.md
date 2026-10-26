@@ -65,9 +65,9 @@ npm run ledger:audio -- --area=U   # listen to one area: its rules and the inten
 
 ```
 Ledger: specs/BUSINESS-RULES.md and 2 area files: specs/rules/business.md, specs/rules/interface.md
-Rules: 16 active (0 observed, 0 open, 16 settled), 0 retired. Intents: 6 (5 observed, 1 settled).
+Rules: 16, all settled. Intents: 6 — 1 settled, 5 observed.
 Settled rules: 16 — 6 tests pass, 2 linked, 8 unlinked.
-Other documents beside the ledger: 1 checked for rule and intent IDs.
+Checked 1 other document beside the ledger for rule and intent IDs.
 
 Settled rules whose tests do not pass yet:
   in-04

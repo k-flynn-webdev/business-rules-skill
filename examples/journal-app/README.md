@@ -36,9 +36,9 @@ npm run ledger:audio     # a listening script of the intents and rules
 `npm run ledger` prints a report like this:
 
 ```
-Rules: 17 active (1 observed, 1 open, 15 settled), 1 retired. Intents: 5 (5 settled).
+Rules: 17 — 15 settled, 1 open, 1 observed; 1 retired. Intents: 5, all settled.
 Settled rules: 15 — 9 tests pass, 1 linked, 5 unlinked.
-Other documents beside the ledger: 2 checked for rule and intent IDs.
+Checked 2 other documents beside the ledger for rule and intent IDs.
 
 Settled rules whose tests do not pass yet:
   in-04

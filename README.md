@@ -289,7 +289,7 @@ scripts/check.sh              one version everywhere; each example's copies matc
 Build the zip, or download it from the repo's releases when there is one:
 
 ```sh
-./scripts/package.sh        # → dist/business-rules-ledger-2.10.0.zip
+./scripts/package.sh        # → dist/business-rules-ledger-2.10.1.zip
 ```
 
 - **Claude apps (claude.ai, Desktop):** upload the zip as a custom skill in Claude's settings,
@@ -366,7 +366,7 @@ and `Scan: business-rules-ledger/assets/ledger-check.ts`, because here the check
 
 ## Versions
 
-The skill is at **2.10.0**. Every ledger states its format (`Format: business-rules-ledger 2.10.0`),
+The skill is at **2.10.1**. Every ledger states its format (`Format: business-rules-ledger 2.10.1`),
 and the skill offers to upgrade an older ledger, listing the changes first. What changed in each
 version is in the changelog at the end of [`SKILL.md`](business-rules-ledger/SKILL.md).
 
