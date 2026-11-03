@@ -1,7 +1,7 @@
 # Business rules ledger — reading, citing and authoring
 
 How to read the business rules ledger in this folder, cite it in code, and write or amend it.
-Format: business-rules-ledger 2.10.1
+Format: business-rules-ledger 2.11.0
 
 Everything a ledger has in common lives here, so the ledger itself holds only its own intents,
 rules and index. Read _How to read the ledger_ to read it, _Citing rules in code_ to cite it, and
@@ -22,7 +22,7 @@ edit them per project.
 - The index is built from the rule entries by `scripts/ledger-check.ts`, which also computes enforcement. Never edit it by hand.
 - Under `Format:`, an `Ignore:` line names paths the checker never reads, and a `Scan:` line paths it reads although it skips them by default.
 - A large ledger keeps some areas in area files. The registry in the ledger names each area's file and owner; the index in the ledger lists every rule, wherever it lives. To read one area's rows only: `ledger-check.ts --index --area=B`.
-- A rule's history is in its **Source** lines. The ledger keeps no change log; git does.
+- A rule's history is in its **Source** lines. The ledger keeps no change log; git does. `ledger-check.ts --rule br-B03` lists the commits that named or changed the rule.
 - Specs and other documents may describe an area, but decisions live in the ledger. When they disagree with the ledger, the ledger wins.
 - Before adding or changing a rule, read the authoring rules (br-M) below.
 
@@ -64,6 +64,17 @@ public void TheTest() { /* Given, When, Then */ }
 
 Put the test ID in the test's display name, not the method name. Run .NET tests with
 `dotnet test --logger trx` and pass the TestResults folder to the checker's `--results=`.
+
+End a commit that changes a rule, its tests or the code citing it with a trailer naming the
+rules, and put the same line in the pull request description, since a squash merge keeps only that:
+
+```
+Shorten the refund window to 14 days
+
+Rules: br-B03, br-B07
+```
+
+Nothing checks it. `git log --grep=br-B03` and `ledger-check.ts --rule br-B03` find the commits.
 
 | Enforcement   | Meaning                                                                                 |
 | ------------- | --------------------------------------------------------------------------------------- |

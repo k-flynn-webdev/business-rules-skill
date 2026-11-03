@@ -2,12 +2,12 @@
 name: "business-rules-ledger"
 description: Capture product intents, business rules and their tests in a business rules ledger — a living, grep-able source of truth that code and tests conform to, with each rule's enforcement computed from the code. Use whenever the user wants to write down a rule, decision, invariant or intent ("add a rule", "write this down", "how should this behave", "what's the rule for X"); describes what the system should or shouldn't do while working on tickets, bugs or features; asks for a spec, requirements or acceptance criteria; wants a ledger built from a codebase; or mentions a rules ledger, intents, br- IDs or rule-driven development. Also use for "grill me" or settling open rules; "intent review" or confirming observed rules; "fresh eyes" or reviewing the ledger; asking which rules are enforced, what's left, or to check the ledger against the code; and "read me the rules", "audio" or "listen". Prefer this over a prose spec.
 metadata:
-  version: "2.10.1"
+  version: "2.11.0"
 ---
 
 # Business Rules Ledger
 
-Version 2.10.1. See the changelog at the end.
+Version 2.11.0. See the changelog at the end.
 
 A ledger of intents and the numbered rules that serve them. An intent says what a user should be
 able to do and what would feel broken. A rule is one decision, stated in one or two sentences,
@@ -404,6 +404,8 @@ the acceptance list. Build in small pieces, each citing its rules and naming its
 - **Who else touches this data?** Before building a rule that protects data from being changed or
   removed, find every other writer: scheduled jobs, database cascades, admin tools, migrations,
   imports. A rule can be broken by code that never mentions it.
+- **Name the rules in the commit.** End the message with `Rules: br-B07`, and put the same line
+  in the pull request description (see _History_).
 - **Cite only where enforced.** `br-B07:` marks code that enforces the rule. Explaining a rule
   elsewhere, write it without the colon, so the index never claims enforcement that is not there.
 - **Rebuilds.** On a rewrite, `gap:` lines still describe the old code. Leave each one until the
@@ -587,8 +589,10 @@ review mode read the tests of any `attended: required` rule against its Fails if
   the rules and intents that carry it, then exits without checking anything else
 - with `--rule=br-B02` (or `--rule br-B02`, or `B02`), prints one rule instead of the report: its
   statement, status and enforcement, the ledger line of its entry, every citation and every test
-  with file and line, and mentions that are not citations. Use it to answer "what does br-B02
-  say, and where is it enforced?" without reading the whole report
+  with file and line, mentions that are not citations, and the commits whose message names the
+  rule or whose diff changes a line naming it, newest 10 first (see _History_). Use it to answer
+  "what does br-B02 say, where is it enforced, and what changed it?" without reading the whole
+  report
 - with `--area`, lists the areas instead of the report: each one's file, owner, and counts of
   active and settled rules, rules whose tests pass, and waiting rules. With `--area=B` (or `--area B`, `B,U`, the area's
   name, or its area file's path), the report covers only those areas: their counts, the settled
@@ -751,9 +755,9 @@ The document header states the format version. When opening a ledger with an old
 no version, say so and offer to upgrade it. Do not upgrade without asking. List the changes the
 upgrade would make before making them.
 
-Upgrading 2.x to 2.10.1 is mechanical; no rule changes:
+Upgrading 2.x to 2.11.0 is mechanical; no rule changes:
 
-1. Set `Format: business-rules-ledger 2.10.1`.
+1. Set `Format: business-rules-ledger 2.11.0`.
 2. Install `assets/business-rules-authoring.md` as `BUSINESS-RULES-AUTHORING.md` next to the ledger.
 3. Delete the `How to write rules (br-M)` section, and point the header line at
    `BUSINESS-RULES-AUTHORING.md` as the template does.
@@ -806,10 +810,14 @@ Upgrading 2.x to 2.10.1 is mechanical; no rule changes:
     `unlinked`, `cited` is `linked`, `tested` is `tests written`, `passing` is `tests pass`. Run
     the checker with `--write` to rewrite the index; until then it reads the old names. Change
     `--require=` in CI and hooks to `tests-written` or `tests-pass`; the old names still work.
+17. From 2.10.1 or earlier: reinstall the authoring file and the checker. The format is unchanged.
+    `--rule` lists the commits that named or changed the rule. From now on, end commits that
+    change a rule, its tests or the code citing it with a `Rules:` trailer (see _History_).
+    Older commits need nothing; the checker finds those that changed a line naming the rule.
 
-Upgrading 1.x to 2.10.1, in stages the user can stop between:
+Upgrading 1.x to 2.11.0, in stages the user can stop between:
 
-1. Set `Format: business-rules-ledger 2.10.1`. Do steps 2 to 4, 6 and 8 to 16 of the 2.x upgrade above.
+1. Set `Format: business-rules-ledger 2.11.0`. Do steps 2 to 4, 6 and 8 to 17 of the 2.x upgrade above.
 2. Add the Intents and Glossary sections. Draft intents from the existing rules and their
    sources, mark them `observed`, and confirm them with the user one at a time.
 3. Add `kind:` and `serves:` to every rule. Propose both; ask only where unclear.
@@ -895,6 +903,24 @@ The ledger keeps no change log. A rule's history lives in its own source lines, 
 reason; the document's history lives in git. When one change touches several rules for one
 reason, give each a source line with the same date and reason, so any one of them explains itself.
 
+Source lines say why a rule changed. Commits say how its enforcement changed, and a commit that
+changes the code under a citation rarely touches the citation line. So name the rules in the
+commit, as a trailer at the end of the message:
+
+```
+Shorten the refund window to 14 days
+
+Rules: br-B03, br-B07
+```
+
+Add it to every commit that changes a rule, its tests or the code citing it, including your own
+commits. Put it in the pull request description too: a squash merge keeps the description and
+drops the branch's commits. `--rule br-B03` then lists the rule's commits, and
+`git log --grep=br-B03` finds them without the checker.
+
+It is a recommendation, never enforced. A commit without the trailer loses only history, and
+`--rule` still finds it when its diff changes a line naming the rule, marked `(diff only)`.
+
 ## The index
 
 The index is built, not written. `scripts/ledger-check.ts --write` reads every rule entry except
@@ -915,7 +941,7 @@ Use this order exactly:
 
 Source of truth. Code and tests conform to this document.
 How to read it, cite it in code and write it: [`BUSINESS-RULES-AUTHORING.md`](BUSINESS-RULES-AUTHORING.md).
-Format: business-rules-ledger 2.10.1
+Format: business-rules-ledger 2.11.0
 Ignore: [paths the checker never reads — optional]
 Scan: [paths it reads although it skips them by default — optional]
 
@@ -1044,6 +1070,7 @@ is now true. Do not write the new one and leave both standing.
 
 ## Changelog
 
+- **2.11.0** — 2026-11-03 — A rule's history in git. Commits that change a rule, its tests or the code citing it end with a `Rules: br-B03` trailer, and pull request descriptions carry it too, since a squash merge keeps only the description. It is recommended, never enforced. `--rule` lists the rule's commits, newest 10 first: those whose message names the rule or one of its tests, and those whose diff changes a line naming it, marked `(diff only)`. Only commits touching what the scan reads count, so ignored paths and copies of the checker stay out. Outside a git repository the list is left out. Format unchanged. Upgrade step 17.
 - **2.10.1** — 2026-10-26 — Every count in the report reads one way: the total first, statuses most decided first and levels highest first, no zeros, and "all" when one part covers the total. `Rules: 38 active (0 observed, 0 open, 38 settled), 0 retired.` is now `Rules: 38, all settled.`, and the intents, `--tag` counts and the `--area` footer follow suit. Plurals are real (`1 settled rule`, never `rule(s)`). Without `--results`, the settled count says tests pass was carried over from the last run that had them, instead of a bare "(no --results given)". Format unchanged.
 - **2.10.0** — 2026-10-25 — The enforcement levels are renamed so each says what is true: `none` is `unlinked`, `cited` is `linked`, `tested` is `tests written` (the tests exist; "tested" sounded as if they had run), and `passing` is `tests pass`. `--require` takes them hyphenated (`--require=tests-pass`), and the old names still work there and in an index not yet rewritten. The report counts settled rules highest level first and leaves out empty levels — `Settled rules: 37 — 30 tests pass, 4 tests written, 2 linked, 1 unlinked.`, or `Settled rules: 37, all tests pass.` — because "0 none, 0 cited, 0 tested" read as counts of failures. `--area` heads its column _Tests pass_. Upgrade step 16: run `--write` once and update `--require=` in CI.
 - **2.9.3** — 2026-10-25 — `Scan:` reads a copy of the checker only when it names that file, not its folder, so a project that scans the folder holding its copy never counts the checker's own citations. Those citations are new: the checker now cites the skill's own rules where it enforces them, and its header says they belong to the skill's ledger, not yours. In the skill's repo, every rule of that ledger is tested by name and passing, and it has a lite spec. Format unchanged.

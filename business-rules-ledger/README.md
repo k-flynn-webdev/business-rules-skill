@@ -1,6 +1,6 @@
 ---
 metadata:
-  version: "2.10.1"
+  version: "2.11.0"
 ---
 
 # The Business Rules Ledger
@@ -115,7 +115,8 @@ tells you which of those intentions the code is currently keeping.**
 
 ## What it looks like day to day
 
-- Someone asks "why does it do that?" — you grep for the rule ID and read the source line.
+- Someone asks "why does it do that?" — you grep for the rule ID and read the source line, and
+  `--rule` lists the commits that changed it.
 - Someone changes the refund window — they amend `br-B03`, cite the conversation, and the test
   that now fails tells them exactly what else assumed 30 days.
 - A rule gets deleted — its ID is never reused, so the history stays readable.

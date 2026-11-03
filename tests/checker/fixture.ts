@@ -7,7 +7,7 @@
 // C and L for the same reason.
 
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
@@ -29,6 +29,30 @@ export function repo(files: Record<string, string>): string {
     writeFileSync(p, text.replace(/\bbr_/g, P));
   }
   return dir;
+}
+
+let clock = Date.UTC(2026, 0, 1) / 1000;
+
+/**
+ * Makes dir a git repository if it is not one, writes these files as repo() does, and commits
+ * everything with this message. Each commit is a minute after the one before, so their order is fixed.
+ */
+export function commit(dir: string, message: string, files: Record<string, string> = {}): void {
+  for (const [path, text] of Object.entries(files)) {
+    const p = join(dir, path);
+    mkdirSync(dirname(p), { recursive: true });
+    writeFileSync(p, text.replace(/\bbr_/g, P));
+  }
+  clock += 60;
+  const date = `${clock} +0000`;
+  const env = { ...process.env, GIT_AUTHOR_DATE: date, GIT_COMMITTER_DATE: date };
+  const git = (...args: string[]) => {
+    const r = spawnSync("git", ["-c", "user.name=Fixture", "-c", "user.email=fixture@example.com", ...args], { cwd: dir, env, encoding: "utf8" });
+    if (r.status !== 0) throw new Error(`git ${args.join(" ")}: ${r.stderr}`);
+  };
+  if (!existsSync(join(dir, ".git"))) git("init", "-q");
+  git("add", "-A");
+  git("commit", "-q", "--allow-empty", "-m", message.replace(/\bbr_/g, P));
 }
 
 export interface Run {
@@ -135,7 +159,7 @@ export const INDEX_HEAD = [
 
 /** A master ledger. With no rules given it holds br_B01, settled, with one test. */
 export function ledger(o: LedgerOptions = {}): string {
-  const out = ["# Business Rules Ledger — fixture", "", "Format: business-rules-ledger 2.10.1"];
+  const out = ["# Business Rules Ledger — fixture", "", "Format: business-rules-ledger 2.11.0"];
   out.push(...(o.header ?? []), "", "---", "", "## Intents", "");
   out.push(...(o.intents ?? [intent("in-01")]), "---", "", "## Index", "");
   out.push(...(o.indexBody ?? [...INDEX_HEAD, ...(o.index ?? [])]), "", "---", "");
