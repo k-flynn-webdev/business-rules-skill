@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 /**
  * Checks a business rules ledger against the codebase, lints it, and computes each rule's enforcement.
- * Version 2.10.1 — ships with the business-rules-ledger skill. Reinstall from the skill to update.
+ * Version 2.11.0 — ships with the business-rules-ledger skill. Reinstall from the skill to update.
  *
  * Usage:
  *   npx tsx scripts/ledger-check.ts                         report only
@@ -15,8 +15,8 @@
  *   npx tsx scripts/ledger-check.ts --waiting               list everything waiting on the owner, not only the oldest 10
  *   npx tsx scripts/ledger-check.ts --tag                   list every tag with how many rules and intents carry it
  *   npx tsx scripts/ledger-check.ts --tag=boilerplate       list the rules and intents carrying that tag
- *   npx tsx scripts/ledger-check.ts --rule=br-C01           one rule: its entry, enforcement, citations and tests
- *                                                            (--rule br-C01 and --rule C01 work too)
+ *   npx tsx scripts/ledger-check.ts --rule=br-C01           one rule: its entry, enforcement, citations, tests and
+ *                                                            commits (--rule br-C01 and --rule C01 work too)
  *   npx tsx scripts/ledger-check.ts --area                  list the areas: file, owner, rules, settled, tests pass, waiting
  *   npx tsx scripts/ledger-check.ts --area=B                the report for one area (or B,U; a name; an area file).
  *                                                            Works with --waiting and --require; the index stays whole.
@@ -48,7 +48,8 @@ import {
   statSync,
   existsSync,
 } from "fs";
-import { join, relative, resolve, extname, dirname, sep } from "path";
+import { join, relative, resolve, extname, dirname, basename, sep } from "path";
+import { spawnSync } from "child_process";
 
 const LEVELS = ["unlinked", "linked", "tests written", "tests pass"] as const;
 type Level = (typeof LEVELS)[number];
@@ -452,6 +453,36 @@ function walk(dir: string, out: string[], onlyScan = false) {
       out.push(p);
   }
   return out;
+}
+
+// br-C25: the commits whose message names the rule, such as a "Rules: br-C01" trailer, or whose
+// diff adds or removes a line naming it, newest first. A test ID names its rule. Only commits
+// touching what the scan reads count: under the root, not in ignored paths, and not in a copy of
+// the checker unless Scan: names its file. undefined when the root has no git history.
+function commitsNaming(bare: string): { line: string; named: boolean }[] | undefined {
+  const re = `br-${bare}([^0-9]|$)`;
+  const format = ["--format=%H%x09%ct%x09%h %ad %s", "--date=short"];
+  const rel = (p: string) => relative(ROOT, p) || ".";
+  const skip = [":(exclude,glob)**/ledger-check.ts", ...IGNORE.map((p) => `:(exclude)${rel(p)}`)];
+  if (SELF.startsWith(ROOT + sep)) skip.push(`:(exclude)${rel(SELF)}`);
+  const copies = SCAN.filter((p) => basename(p) === "ledger-check.ts" && !within(p, IGNORE));
+  const log = (match: string) => {
+    const git = (paths: string[]) => {
+      const r = spawnSync("git", ["log", "-E", match, ...format, "--", ...paths], { cwd: ROOT, encoding: "utf8" });
+      return r.status === 0 ? r.stdout.split("\n").filter(Boolean) : undefined;
+    };
+    const found = git([".", ...skip]);
+    return found && copies.length ? [...found, ...(git(copies.map(rel)) ?? [])] : found;
+  };
+  const named = log(`--grep=${re}`);
+  if (!named) return undefined;
+  const byHash = new Map<string, { line: string; named: boolean; time: number }>();
+  for (const [list, isNamed] of [[named, true], [log(`-G${re}`) ?? [], false]] as const)
+    for (const row of list) {
+      const [hash, time, line] = row.split("\t");
+      if (!byHash.has(hash)) byHash.set(hash, { line, named: isNamed, time: Number(time) });
+    }
+  return [...byHash.values()].sort((a, b) => b.time - a.time);
 }
 
 // br-C19: a header setting, "Ignore: examples/, vendor/" → absolute paths. A path that does not exist
@@ -1100,6 +1131,15 @@ function main() {
       out.push(`  br-${t}  ${(testsAt.get(t) ?? ["missing"]).join(", ")}`);
     const said = mentions.get(bare);
     if (said) out.push("", "Mentioned, not cited:", ...said.map((w) => `  ${w}`));
+    // br-C25: the rule's history in git, the newest 10 and a count of the rest.
+    const commits = commitsNaming(bare);
+    if (commits) {
+      out.push("", "Commits:");
+      if (!commits.length) out.push("  (none)");
+      for (const c of commits.slice(0, 10))
+        out.push(`  ${c.line}${c.named ? "" : "  (diff only)"}`);
+      if (commits.length > 10) out.push(`  …and ${plural(commits.length - 10, "more commit")}.`);
+    }
     console.log(out.join("\n"));
     process.exit(0);
   }

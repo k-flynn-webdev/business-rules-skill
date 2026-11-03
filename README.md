@@ -160,6 +160,7 @@ shape, so you can search for one kind at a time:
 | Just the rule, in one line            | its row in the index       | `git grep -h "^\| br-B02 \|"`                                  |
 | The code that enforces it (citations) | `br-B02:` or `@see br-B02` | `git grep -nE "br-B02:\|@see +br-B02([^.0-9]\|$)" -- ':!*.md'` |
 | Its tests                             | `br-B02.1`, `br-B02.2`, …  | `git grep -nE "br-B02\.[0-9]+" -- ':!*.md'`                    |
+| The commits that changed it           | `Rules: br-B02` trailer    | `git log --grep=br-B02`                                        |
 
 `git grep` searches only files git tracks, so `node_modules` and test-result files stay out of
 the answer. `-w` stops `br-B02` matching `br-B020`. `-- ':!*.md'` leaves out the ledger and other
@@ -219,12 +220,15 @@ not as a quiet change in behaviour.
 
 ## Day to day
 
-Five habits. Most are one line.
+Six habits. Most are one line.
 
 - **Before you change something,** read the rules it touches: `npm run rule br-B02`, or ask
   Claude _"what are the rules for tracks?"_.
 - **In code,** cite the rule where you enforce it: `// br-B02: …` or `@see br-B02`.
 - **In tests,** name each test after its test ID: `it("br-B02.1 1 character is rejected", …)`.
+- **In commits,** name the rules: end the message with `Rules: br-B02`, and put the same line in
+  the PR description, since a squash merge keeps only that. Nothing enforces it; `--rule` lists
+  the commits.
 - **When the ledger does not answer,** do not guess. Say _"write this down"_, or leave the rule
   `open` with the question under it.
 - **Before the PR,** run the checker. In CI, run the tests with a results file, then
@@ -289,7 +293,7 @@ scripts/check.sh              one version everywhere; each example's copies matc
 Build the zip, or download it from the repo's releases when there is one:
 
 ```sh
-./scripts/package.sh        # → dist/business-rules-ledger-2.10.1.zip
+./scripts/package.sh        # → dist/business-rules-ledger-2.11.0.zip
 ```
 
 - **Claude apps (claude.ai, Desktop):** upload the zip as a custom skill in Claude's settings,
@@ -327,7 +331,7 @@ npx tsx scripts/ledger-check.ts --results=results.json  # test results decide "t
 npx tsx scripts/ledger-check.ts --verify                # exit 1 if the index is stale
 npx tsx scripts/ledger-check.ts --require=tests-written # exit 1 if a settled rule has no tests
 npx tsx scripts/ledger-check.ts --tag=privacy           # list the rules carrying a tag
-npx tsx scripts/ledger-check.ts --rule br-B02           # one rule: entry, citations, tests
+npx tsx scripts/ledger-check.ts --rule br-B02           # one rule: entry, citations, tests, commits
 npx tsx scripts/ledger-check.ts --area                  # list the areas: file, owner, what is waiting
 npx tsx scripts/ledger-check.ts --area=B                # the report for one area
 npx tsx scripts/ledger-check.ts --index --area=B        # one area's rows of the index
@@ -366,7 +370,7 @@ and `Scan: business-rules-ledger/assets/ledger-check.ts`, because here the check
 
 ## Versions
 
-The skill is at **2.10.1**. Every ledger states its format (`Format: business-rules-ledger 2.10.1`),
+The skill is at **2.11.0**. Every ledger states its format (`Format: business-rules-ledger 2.11.0`),
 and the skill offers to upgrade an older ledger, listing the changes first. What changed in each
 version is in the changelog at the end of [`SKILL.md`](business-rules-ledger/SKILL.md).
 

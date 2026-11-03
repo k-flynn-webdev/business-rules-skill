@@ -47,7 +47,7 @@ One run, in order:
    gaps. `--require` sets the exit code (br-C14).
 
 Instead of the full report, three modes print less: `--area` (br-C20), `--rule` (br-C21) and
-`--index` (br-C22).
+`--index` (br-C22). `--rule` also lists the rule's commits from git (br-C25).
 
 | Part in `ledger-check.ts`           | What it does                                     | Rules                  |
 | ----------------------------------- | ------------------------------------------------ | ---------------------- |
@@ -58,6 +58,7 @@ Instead of the full report, three modes print less: `--area` (br-C20), `--rule` 
 | `renderIndex()`                     | The index                                        | br-C11, br-C12, br-C13 |
 | `main()`, the report                | Counts, waiting list, gaps, exit code            | br-C14, br-C15, br-C23, br-C24 |
 | `areaLetters()`, `aboutArea()`      | Narrowing to areas                               | br-C20, br-C22         |
+| `commitsNaming()`                   | A rule's commits                                 | br-C25                 |
 
 ## Why these rules work together
 
@@ -88,6 +89,12 @@ repo. A repo that ships examples, or copies of the checker, says so in its heade
 br-C18). The checker never reads a copy of itself unless `Scan:` names that file, which is why
 the citations it carries, written for this ledger, never count in a user's project.
 
+**A rule's history has two halves.** Source lines say why a rule changed; commits say how its
+enforcement changed. The checker finds a commit by its message, which a `Rules:` trailer makes
+reliable, or by a diff touching a line that names the rule, which needs no discipline but misses
+a change under a citation (br-C25). Both are limited to what the scan reads, so commits for an
+ignored project, or to a copy of the checker, never appear.
+
 **One area can be gated on its own.** With `--area`, the exit code follows what is shown
 (br-C20), so `--area=B --require=tests-written` gates area B without waiting for the others. The full
 run, without `--area`, still fails on any error anywhere.
@@ -102,6 +109,9 @@ run, without `--area`, still fails on any error anywhere.
   `TestRun` or `testsuite` (br-C06).
 - br-C04 reads the previous Enforcement column from the index being replaced, so a sticky
   "tests pass" needs no state file. It also reads `passing`, the name before 2.10.0.
+- br-C25 runs `git log` twice, once with `--grep` for messages and once with `-G` for diffs,
+  with the scan's exclusions as pathspecs, and merges the two by commit date. Outside git, or
+  with no commits, both fail and the section is left out.
 - The tests in `tests/checker/` run the shipped checker against small throwaway repos, one test
   per test ID. Fixture text never spells out a rule ID, so the checker reading this repo never
   counts a fixture's rule as its own.
@@ -122,3 +132,5 @@ run, without `--area`, still fails on any error anywhere.
   counts settled rules highest first, without empty levels (2.10.0).
 - 2026-10-26: every count in the report reads the same way, and a run without results says
   where tests pass came from (2.10.1).
+- 2026-11-03: `--rule` lists the rule's commits, and the skill recommends a `Rules:` trailer
+  (2.11.0).

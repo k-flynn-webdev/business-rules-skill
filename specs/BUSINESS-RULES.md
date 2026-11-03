@@ -2,7 +2,7 @@
 
 Source of truth. Code and tests conform to this document.
 How to read it, cite it in code and write it: [`BUSINESS-RULES-AUTHORING.md`](BUSINESS-RULES-AUTHORING.md).
-Format: business-rules-ledger 2.10.1
+Format: business-rules-ledger 2.11.0
 Ignore: examples/
 Scan: business-rules-ledger/assets/ledger-check.ts
 
@@ -162,6 +162,7 @@ Every rule, in this document or an area file. Built by `business-rules-ledger/as
 | br-C22 | When the checker runs with --index, then it prints the index as --write would build it, instead of the report. With --area, it prints only those areas' rows. | in-05 | `scale` `index` | settled | tests pass |
 | br-C23 | When the report counts anything, then it gives the total first, lists statuses most decided first and levels highest first, and leaves out any count of zero. When one part covers the total it says all, and every count uses a real plural. | in-01 | `enforcement` `report` | settled | tests pass |
 | br-C24 | When the checker runs without a results file, then the settled count says where tests pass came from: carried over from the last run that had results, or out of reach. | in-01 | `enforcement` `report` | settled | tests pass |
+| br-C25 | When the checker runs with --rule in a git repository, then it lists the commits whose message names the rule or whose diff adds or removes a line naming it, newest first. It counts only commits that touch what the scan reads, and shows the newest 10 with a count of the rest. | in-05 | `scale` `history` | settled | tests pass |
 | br-L01 | When a rule's status is not observed, open, settled or retired, then the checker reports an error. | in-04 | `lint` | settled | tests pass |
 | br-L02 | When an active rule has no statement, no Fails if line, or a kind other than definition, invariant or behaviour, then the checker reports an error. | in-04 | `lint` | settled | tests pass |
 | br-L03 | When a rule's `serves:` names something that is not an intent, or its `given:` names something that is not a rule, then the checker reports an error. | in-04 | `lint` | settled | tests pass |
@@ -762,6 +763,38 @@ When the checker runs without a results file, then the settled count says where 
 **Source**
 
 - 2026-10-26, conversation. "Settled rules: 38, all tests pass. (no --results given)" read as a contradiction: how can tests pass with no results? Saying the level was carried over (br-C04) removes it.
+
+---
+
+## br-C25
+
+kind: behaviour | serves: in-05 | given: br-C16, br-C17, br-C18, br-C21 | status: settled
+
+When the checker runs with --rule in a git repository, then it lists the commits whose message names the rule or whose diff adds or removes a line naming it, newest first. It counts only commits that touch what the scan reads, and shows the newest 10 with a count of the rest.
+
+`#scale` `#history`
+
+**Tests**
+
+- C25.1 — Given a commit whose message ends "Rules: br-B01" and changes no line naming it. When the checker runs with --rule B01. Then that commit is listed.
+- C25.2 — Given a commit that adds a line citing br-B01, with a message that does not name it. When the checker runs with --rule B01. Then that commit is listed, marked diff only.
+- C25.3 — Given a commit whose message names test br-B01.1. When the checker runs with --rule B01. Then that commit is listed.
+- C25.4 — Given `Ignore: examples/` and a commit adding a line naming br-B01 under examples/. When the checker runs with --rule B01. Then that commit is not listed.
+- C25.5 — Given `Ignore: examples/` and a commit whose message names br-B01 and which changes only files under examples/. When the checker runs with --rule B01. Then that commit is not listed.
+- C25.6 — Given a commit adding a line naming br-B01 to a copy of the checker. When the checker runs with --rule B01. Then that commit is not listed.
+- C25.7 — Given 10 commits naming br-B01. When the checker runs with --rule B01. Then all 10 are listed and no more are counted.
+- C25.8 — Given 11 commits naming br-B01. When the checker runs with --rule B01. Then the newest 10 are listed, newest first, then "…and 1 more commit."
+- C25.9 — Given a folder outside any git repository. When the checker runs with --rule B01. Then it exits 0 and prints no Commits section.
+
+> Fails if a commit touching what the scan reads, whose message names the rule or whose diff changes a line naming it, is left out, or any other commit is listed.
+
+**Design notes**
+
+- The skill recommends a `Rules: br-B03, br-B07` trailer on every commit that changes a rule, its tests or the code citing it, and on the pull request description, since a squash merge keeps only that. Nothing checks it: a commit without one is still found by its diff when it touches a line naming the rule, and marked diff only.
+
+**Source**
+
+- 2026-11-03, conversation. A rule's source lines say why it changed, and its citations where it is enforced now; nothing said which commits changed how it is enforced. A commit that changes the code under a citation rarely touches the citation line, so only the message can name the rule. Recommended, never enforced: a missing trailer loses history, not correctness. Commits are limited to what the scan reads so that, in a repo holding other projects, a commit naming another ledger's rule of the same ID is not listed.
 
 ---
 
