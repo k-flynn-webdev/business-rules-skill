@@ -15,7 +15,7 @@ journal-app/
 │   ├── lite-spec-streaks.md           ← a readable overview that decides nothing
 │   └── lite-spec-anniversary-card.md
 ├── src/
-│   ├── tracks.ts, streaks.ts, …       ← code that cites rules: `// br-B02:` and `@see br-B07`
+│   ├── tracks.ts, streaks.ts, …       ← code that cites rules: `// br-B02:`
 │   └── *.test.ts                      ← tests named after test IDs: "br-B02.1 …"
 └── scripts/
     ├── ledger-check.ts                ← builds the index and computes enforcement

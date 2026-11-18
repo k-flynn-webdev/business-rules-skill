@@ -2,7 +2,7 @@
 
 Source of truth. Code and tests conform to this document.
 How to read it, cite it in code and write it: [`BUSINESS-RULES-AUTHORING.md`](BUSINESS-RULES-AUTHORING.md).
-Format: business-rules-ledger 2.11.0
+Format: business-rules-ledger 2.12.0
 Ignore: examples/
 Scan: business-rules-ledger/assets/ledger-check.ts
 
@@ -119,7 +119,7 @@ Each domain term, defined once. Rules use these terms exactly.
 
 | Term | Meaning | Defined by |
 | --- | --- | --- |
-| citation | A rule ID in code followed by a colon, or after `@see`. Marks where the code enforces the rule. | br-C01 |
+| citation | A rule ID in code followed by a colon. Marks where the code enforces the rule. | br-C01 |
 | mention | Any other rule ID in code. Never counts as enforcement. | br-C01 |
 | test name | A test ID with its br- prefix inside a string literal in code, such as `"br-C01.1 …"`. | br-C02 |
 | enforcement | How far the code has got with a rule: unlinked, linked, tests written or tests pass. | br-C03 |
@@ -138,7 +138,7 @@ Every rule, in this document or an area file. Built by `business-rules-ledger/as
 
 | ID | Rule | Serves | Tags | Status | Enforcement |
 | --- | --- | --- | --- | --- | --- |
-| br-C01 | A citation is a rule ID in code followed by a colon, or preceded by `@see`. A list of rule IDs that ends in a colon cites every ID in it. | in-01 | `citation` `enforcement` | settled | tests pass |
+| br-C01 | A citation is a rule ID in code followed by a colon, and a list of rule IDs that ends in a colon cites every ID in it. A rule ID after `@see` with no colon is a mention, and the checker warns with its file and line. | in-01 | `citation` `enforcement` | settled | tests pass |
 | br-C02 | A test name is a test ID with its br- prefix inside a single-line string literal in code. The same text anywhere else is a mention of the rule. | in-01 | `tests` `enforcement` | settled | tests pass |
 | br-C03 | A rule's enforcement is tests pass when every ledger test has a test name in code and all of them passed in the results file. Otherwise it is tests written when every ledger test has a test name, linked when code cites the rule, and unlinked when neither holds. | in-01 | `enforcement` | settled | tests pass |
 | br-C04 | When the checker runs without a results file, then a rule the index shows at tests pass stays there while every one of its ledger tests still has a test name in code. An index written before 2.10.0 says passing for the same level. | in-01 | `enforcement` `results` | settled | tests pass |
@@ -200,7 +200,7 @@ Retire an ID. Never reuse one — rule or intent.
 
 kind: definition | serves: in-01 | status: settled
 
-A citation is a rule ID in code followed by a colon, or preceded by `@see`. A list of rule IDs that ends in a colon cites every ID in it.
+A citation is a rule ID in code followed by a colon, and a list of rule IDs that ends in a colon cites every ID in it. A rule ID after `@see` with no colon is a mention, and the checker warns with its file and line.
 
 `#citation` `#enforcement`
 
@@ -209,9 +209,11 @@ A citation is a rule ID in code followed by a colon, or preceded by `@see`. A li
 | Test | Line of code | Cites |
 | --- | --- | --- |
 | C01.1 | `// br-C01: a colon cites` | br-C01 |
-| C01.2 | `/** @see br-C01 */` | br-C01 |
+| C01.2 | `/** @see br-C01 */` | nothing; a mention |
 | C01.3 | `// br-C01, br-C02: both` | br-C01 and br-C02 |
 | C01.4 | `// explained in br-C01` | nothing; a mention |
+| C01.5 | `* @see br-C01 the rule` on line 2 | nothing; warns "line 2: @see br-C01 is a mention since 2.12.0 … Cite with a colon: br-C01:" |
+| C01.6 | `/** @see br-C01: the rule */` | br-C01, with no warning |
 
 > Fails if a line that cites a rule is not counted as a citation, or a line that only mentions one is.
 
@@ -219,6 +221,7 @@ A citation is a rule ID in code followed by a colon, or preceded by `@see`. A li
 
 - 2026-10-22, observed: `ledger-check.ts` isCitation(). Implements br-M12.
 - 2026-10-25, intent review. Intended, confirmed with the citation, test and results rules: these definitions are what make enforcement computed rather than claimed.
+- 2026-11-19, owner: one way to link a rule in code, one in tests, and plain mentions for everything else. "Keep things simple." `@see` stops citing; the colon works in a documentation comment too. A leftover `@see` is warned about, so no citation is lost silently in the upgrade. Implements br-M12 (2.12.0).
 
 ---
 
@@ -319,6 +322,7 @@ When any result for a test ID failed, then that test has not passed, even if oth
 
 - 2026-10-22, observed: `ledger-check.ts` readResults(). Rows of a data-driven test share one test ID.
 - 2026-10-25, intent review. Intended, confirmed with the citation, test and results rules: these definitions are what make enforcement computed rather than claimed.
+- 2026-11-19, owner: one way to link a rule in code, one in tests, and plain mentions for everything else. "Keep things simple." `@see` stops citing; the colon works in a documentation comment too. A leftover `@see` is warned about, so no citation is lost silently in the upgrade. Implements br-M12 (2.12.0).
 
 ---
 
@@ -342,6 +346,7 @@ When the checker is given results, then it reads Jest or Vitest JSON, TRX and JU
 
 - 2026-10-22, observed: `ledger-check.ts` readResults(), trxOutcomes(), junitOutcomes() and jestOutcomes().
 - 2026-10-25, intent review. Intended, confirmed with the citation, test and results rules: these definitions are what make enforcement computed rather than claimed.
+- 2026-11-19, owner: one way to link a rule in code, one in tests, and plain mentions for everything else. "Keep things simple." `@see` stops citing; the colon works in a documentation comment too. A leftover `@see` is warned about, so no citation is lost silently in the upgrade. Implements br-M12 (2.12.0).
 
 ---
 
@@ -364,6 +369,7 @@ When a results file holds results but none is named with a br- test ID, then the
 
 - 2026-10-22, observed: `ledger-check.ts` readResults(). The .NET JUnit logger writes method names, so display names with the test ID are lost (SKILL.md _Test names by stack_).
 - 2026-10-25, intent review. Intended, confirmed with the citation, test and results rules: these definitions are what make enforcement computed rather than claimed.
+- 2026-11-19, owner: one way to link a rule in code, one in tests, and plain mentions for everything else. "Keep things simple." `@see` stops citing; the colon works in a documentation comment too. A leftover `@see` is warned about, so no citation is lost silently in the upgrade. Implements br-M12 (2.12.0).
 
 ---
 
@@ -409,6 +415,7 @@ When scanned code has a test name for a rule whose entry does not list that test
 
 - 2026-10-22, observed: `ledger-check.ts` main(), the per-rule test comparison.
 - 2026-10-25, intent review. Intended, confirmed with the citation, test and results rules: these definitions are what make enforcement computed rather than claimed.
+- 2026-11-19, owner: one way to link a rule in code, one in tests, and plain mentions for everything else. "Keep things simple." `@see` stops citing; the colon works in a documentation comment too. A leftover `@see` is warned about, so no citation is lost silently in the upgrade. Implements br-M12 (2.12.0).
 
 ---
 
@@ -431,6 +438,7 @@ When a string literal in scanned code holds a test ID without its br- prefix, an
 
 - 2026-10-22, observed: `ledger-check.ts` scanCode() unprefixed, and main(). Implements br-M13.
 - 2026-10-25, intent review. Intended, confirmed with the citation, test and results rules: these definitions are what make enforcement computed rather than claimed.
+- 2026-11-19, owner: one way to link a rule in code, one in tests, and plain mentions for everything else. "Keep things simple." `@see` stops citing; the colon works in a documentation comment too. A leftover `@see` is warned about, so no citation is lost silently in the upgrade. Implements br-M12 (2.12.0).
 
 ---
 

@@ -28,7 +28,8 @@ One run, in order:
    outside dependency and build folders, never the ledger and never a copy of the checker
    (br-C16).
 3. **Read every rule ID in it, three ways.**
-   - Followed by a colon or after `@see`, it is a citation (br-C01).
+   - Followed by a colon, it is a citation (br-C01). After `@see` without a colon, it is a
+     mention, and the checker names the line.
    - A test ID inside a one-line string is a test name (br-C02).
    - Anything else is a mention, which counts for nothing.
 
@@ -134,3 +135,4 @@ run, without `--area`, still fails on any error anywhere.
   where tests pass came from (2.10.1).
 - 2026-11-03: `--rule` lists the rule's commits, and the skill recommends a `Rules:` trailer
   (2.11.0).
+- 2026-11-19: the colon is the one way to cite; `@see` is a mention, warned about (2.12.0).

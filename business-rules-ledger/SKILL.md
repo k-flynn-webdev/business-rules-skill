@@ -2,12 +2,12 @@
 name: "business-rules-ledger"
 description: Capture product intents, business rules and their tests in a business rules ledger — a living, grep-able source of truth that code and tests conform to, with each rule's enforcement computed from the code. Use whenever the user wants to write down a rule, decision, invariant or intent ("add a rule", "write this down", "how should this behave", "what's the rule for X"); describes what the system should or shouldn't do while working on tickets, bugs or features; asks for a spec, requirements or acceptance criteria; wants a ledger built from a codebase; or mentions a rules ledger, intents, br- IDs or rule-driven development. Also use for "grill me" or settling open rules; "intent review" or confirming observed rules; "fresh eyes" or reviewing the ledger; asking which rules are enforced, what's left, or to check the ledger against the code; and "read me the rules", "audio" or "listen". Prefer this over a prose spec.
 metadata:
-  version: "2.11.0"
+  version: "2.12.0"
 ---
 
 # Business Rules Ledger
 
-Version 2.11.0. See the changelog at the end.
+Version 2.12.0. See the changelog at the end.
 
 A ledger of intents and the numbered rules that serve them. An intent says what a user should be
 able to do and what would feel broken. A rule is one decision, stated in one or two sentences,
@@ -68,7 +68,7 @@ file in its header line, so every token a reader spends on the ledger is about t
 - **br-M09** — Write each rule's statement, serves, tags and status once, in its entry. The checker builds the index from the entries: every rule except the authoring rules (br-M), never dropping one. Never edit the index by hand.
 - **br-M10** — Mark a rule observed when it was read from existing code and the owner has not confirmed it. Mark it open while any question about it is unanswered, and write the questions under the rule. Mark it settled only when every question has an answer. Mark it retired when it no longer applies, and keep the entry. An observed rule may carry open questions; intent review makes it open or settled.
 - **br-M11** — Write tests for an open rule. Expect them to change. Do not treat an open rule as a decision.
-- **br-M12** — Cite the rule wherever the code enforces it, as the ID followed by a colon (`br-B03:`) or after `@see`. Use the language's documentation comment when the code is a function or a type. Mention a rule anywhere else without the colon; only citations count as enforcement.
+- **br-M12** — Cite the rule wherever the code enforces it, as the ID followed by a colon (`br-B03:`). Put the citation in the language's documentation comment when the code is a function or a type, and in a line comment above the line otherwise. Mention a rule anywhere else without the colon; only citations count as enforcement.
 - **br-M13** — Name each test in code after its test ID, with the br- prefix: br-B03.1. The ID goes in the test name, not in a comment.
 - **br-M14** — Cite the rule, not the document. Write br-B03. Do not write "see the rules doc".
 - **br-M15** — _Retired in 2.5.0._ Previously: record every change in a table at the head of the document. A rule's history lives in its source lines, and the document's in git.
@@ -553,10 +553,11 @@ review mode read the tests of any `attended: required` rule against its Fails if
 
 `scripts/ledger-check.ts` does the computing. It:
 
-- scans the repository's code files. `br-B07:` (the ID followed by a colon) and `@see br-B07`
-  are citations: code that enforces the rule. Any other mention, such as "(br-B07)" in an
-  explanation, is not counted, so explaining a rule never makes it look enforced; the checker
-  reports how many such mentions it saw. `br-B07.1` inside a string literal is a test name. A test
+- scans the repository's code files. `br-B07:` (the ID followed by a colon) is a citation:
+  code that enforces the rule. Any other mention, such as "(br-B07)" in an explanation, is not
+  counted, so explaining a rule never makes it look enforced; the checker reports how many such
+  mentions it saw. `@see br-B07` cited before 2.12.0 and is a mention now; the checker names each
+  such line. `br-B07.1` inside a string literal is a test name. A test
   named with a bare `B07.1` is reported as a likely missing prefix. An ID in code that matches no
   rule is an error, cited or mentioned
 - skips dependency and build folders and copies of itself. Two optional lines under the master's
@@ -755,15 +756,15 @@ The document header states the format version. When opening a ledger with an old
 no version, say so and offer to upgrade it. Do not upgrade without asking. List the changes the
 upgrade would make before making them.
 
-Upgrading 2.x to 2.11.0 is mechanical; no rule changes:
+Upgrading 2.x to 2.12.0 is mechanical; no rule changes:
 
-1. Set `Format: business-rules-ledger 2.11.0`.
+1. Set `Format: business-rules-ledger 2.12.0`.
 2. Install `assets/business-rules-authoring.md` as `BUSINESS-RULES-AUTHORING.md` next to the ledger.
 3. Delete the `How to write rules (br-M)` section, and point the header line at
    `BUSINESS-RULES-AUTHORING.md` as the template does.
 4. Remove the br-M rows from the index. Note the file in the registry's M row.
 5. Reinstall both scripts from the skill and run the checker.
-6. From 2.3.0 or earlier: only `br-B07:` and `@see br-B07` count as citations now. Run the
+6. From 2.3.0 or earlier: only `br-B07:` counts as a citation now. Run the
    checker; it reports uncounted mentions. Add the colon where the code enforces the rule.
 7. From 2.3.5 or earlier: reinstall both scripts. The checker now reads tags. It warns about a rule
    with no tags or a malformed tag; fix those. Tagging intents is optional. No rule changes.
@@ -814,10 +815,14 @@ Upgrading 2.x to 2.11.0 is mechanical; no rule changes:
     `--rule` lists the commits that named or changed the rule. From now on, end commits that
     change a rule, its tests or the code citing it with a `Rules:` trailer (see _History_).
     Older commits need nothing; the checker finds those that changed a line naming the rule.
+18. From 2.11.0 or earlier: reinstall the authoring file and the checker. The format is unchanged.
+    `@see br-B07` no longer cites the rule; the colon is the one way to cite. The checker warns
+    once per `@see` line it finds. Rewrite each as `br-B07: …` in the same documentation comment,
+    then run the checker with `--write`: no rule's enforcement should drop.
 
-Upgrading 1.x to 2.11.0, in stages the user can stop between:
+Upgrading 1.x to 2.12.0, in stages the user can stop between:
 
-1. Set `Format: business-rules-ledger 2.11.0`. Do steps 2 to 4, 6 and 8 to 17 of the 2.x upgrade above.
+1. Set `Format: business-rules-ledger 2.12.0`. Do steps 2 to 4, 6 and 8 to 18 of the 2.x upgrade above.
 2. Add the Intents and Glossary sections. Draft intents from the existing rules and their
    sources, mark them `observed`, and confirm them with the user one at a time.
 3. Add `kind:` and `serves:` to every rule. Propose both; ask only where unclear.
@@ -941,7 +946,7 @@ Use this order exactly:
 
 Source of truth. Code and tests conform to this document.
 How to read it, cite it in code and write it: [`BUSINESS-RULES-AUTHORING.md`](BUSINESS-RULES-AUTHORING.md).
-Format: business-rules-ledger 2.11.0
+Format: business-rules-ledger 2.12.0
 Ignore: [paths the checker never reads — optional]
 Scan: [paths it reads although it skips them by default — optional]
 
@@ -1070,6 +1075,7 @@ is now true. Do not write the new one and leave both standing.
 
 ## Changelog
 
+- **2.12.0** — 2026-11-19 — One way to cite a rule in code: the ID followed by a colon, in a line comment or a documentation comment. `@see br-B07` is a mention now, like any other, and the checker warns with the file and line of each one so no citation is lost silently (br-C01, br-M12). Tests are unchanged: the ID in the test's name. Format unchanged. Upgrade step 18.
 - **2.11.0** — 2026-11-03 — A rule's history in git. Commits that change a rule, its tests or the code citing it end with a `Rules: br-B03` trailer, and pull request descriptions carry it too, since a squash merge keeps only the description. It is recommended, never enforced. `--rule` lists the rule's commits, newest 10 first: those whose message names the rule or one of its tests, and those whose diff changes a line naming it, marked `(diff only)`. Only commits touching what the scan reads count, so ignored paths and copies of the checker stay out. Outside a git repository the list is left out. Format unchanged. Upgrade step 17.
 - **2.10.1** — 2026-10-26 — Every count in the report reads one way: the total first, statuses most decided first and levels highest first, no zeros, and "all" when one part covers the total. `Rules: 38 active (0 observed, 0 open, 38 settled), 0 retired.` is now `Rules: 38, all settled.`, and the intents, `--tag` counts and the `--area` footer follow suit. Plurals are real (`1 settled rule`, never `rule(s)`). Without `--results`, the settled count says tests pass was carried over from the last run that had them, instead of a bare "(no --results given)". Format unchanged.
 - **2.10.0** — 2026-10-25 — The enforcement levels are renamed so each says what is true: `none` is `unlinked`, `cited` is `linked`, `tested` is `tests written` (the tests exist; "tested" sounded as if they had run), and `passing` is `tests pass`. `--require` takes them hyphenated (`--require=tests-pass`), and the old names still work there and in an index not yet rewritten. The report counts settled rules highest level first and leaves out empty levels — `Settled rules: 37 — 30 tests pass, 4 tests written, 2 linked, 1 unlinked.`, or `Settled rules: 37, all tests pass.` — because "0 none, 0 cited, 0 tested" read as counts of failures. `--area` heads its column _Tests pass_. Upgrade step 16: run `--write` once and update `--require=` in CI.

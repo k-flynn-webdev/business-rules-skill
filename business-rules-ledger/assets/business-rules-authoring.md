@@ -1,7 +1,7 @@
 # Business rules ledger — reading, citing and authoring
 
 How to read the business rules ledger in this folder, cite it in code, and write or amend it.
-Format: business-rules-ledger 2.11.0
+Format: business-rules-ledger 2.12.0
 
 Everything a ledger has in common lives here, so the ledger itself holds only its own intents,
 rules and index. Read _How to read the ledger_ to read it, _Citing rules in code_ to cite it, and
@@ -33,13 +33,14 @@ edit them per project.
 The ID is the link. `git grep -nw "br-[X][NN]"` (or `ledger-check.ts --rule br-[X][NN]`) returns the rule, its tests, and the code that enforces it.
 `scripts/ledger-check.ts` reads the same citations to compute enforcement.
 
-A citation is the ID followed by a colon (`br-B07:`) or after `@see`. Mentioning a rule anywhere
-else, such as "(br-B07)" in an explanation, does not count as enforcement.
+A citation is the ID followed by a colon (`br-B07:`), in a line comment or a documentation
+comment. Mentioning a rule anywhere else, such as "(br-B07)" in an explanation or `@see br-B07`,
+does not count as enforcement.
 
 ```js
 /**
  * [What the function does.]
- * @see br-[X][NN] [The rule, in one line.]
+ * br-[X][NN]: [The rule, in one line.]
  */
 function doTheThing(...) { ... }
 ```
@@ -100,7 +101,7 @@ Nothing checks it. `git log --grep=br-B03` and `ledger-check.ts --rule br-B03` f
 - **br-M09** — Write each rule's statement, serves, tags and status once, in its entry. The checker builds the index from the entries: every rule except the authoring rules (br-M), never dropping one. Never edit the index by hand.
 - **br-M10** — Mark a rule observed when it was read from existing code and the owner has not confirmed it. Mark it open while any question about it is unanswered, and write the questions under the rule. Mark it settled only when every question has an answer. Mark it retired when it no longer applies, and keep the entry. An observed rule may carry open questions; intent review makes it open or settled.
 - **br-M11** — Write tests for an open rule. Expect them to change. Do not treat an open rule as a decision.
-- **br-M12** — Cite the rule wherever the code enforces it, as the ID followed by a colon (`br-B03:`) or after `@see`. Use the language's documentation comment when the code is a function or a type. Mention a rule anywhere else without the colon; only citations count as enforcement.
+- **br-M12** — Cite the rule wherever the code enforces it, as the ID followed by a colon (`br-B03:`). Put the citation in the language's documentation comment when the code is a function or a type, and in a line comment above the line otherwise. Mention a rule anywhere else without the colon; only citations count as enforcement.
 - **br-M13** — Name each test in code after its test ID, with the br- prefix: br-B03.1. The ID goes in the test name, not in a comment.
 - **br-M14** — Cite the rule, not the document. Write br-B03. Do not write "see the rules doc".
 - **br-M15** — _Retired in 2.5.0._ Previously: record every change in a table at the head of the document. A rule's history lives in its source lines, and the document's in git.
