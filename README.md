@@ -158,13 +158,13 @@ shape, so you can search for one kind at a time:
 | ------------------------------------- | -------------------------- | -------------------------------------------------------------- |
 | Everything about the rule             | `br-B02` anywhere          | `git grep -nw "br-B02"`                                        |
 | Just the rule, in one line            | its row in the index       | `git grep -h "^\| br-B02 \|"`                                  |
-| The code that enforces it (citations) | `br-B02:` or `@see br-B02` | `git grep -nE "br-B02:\|@see +br-B02([^.0-9]\|$)" -- ':!*.md'` |
+| The code that enforces it (citations) | `br-B02:`                  | `git grep -n "br-B02:" -- ':!*.md'`                            |
 | Its tests                             | `br-B02.1`, `br-B02.2`, …  | `git grep -nE "br-B02\.[0-9]+" -- ':!*.md'`                    |
 | The commits that changed it           | `Rules: br-B02` trailer    | `git log --grep=br-B02`                                        |
 
 `git grep` searches only files git tracks, so `node_modules` and test-result files stay out of
 the answer. `-w` stops `br-B02` matching `br-B020`. `-- ':!*.md'` leaves out the ledger and other
-documents, so the last two return only code. Only `br-B02:` and `@see br-B02` count as citations;
+documents, so the last two return only code. Only `br-B02:` counts as a citation;
 any other mention does not count as enforcement. To print a rule's whole entry from the ledger,
 see [Advanced searches](#advanced-searches).
 
@@ -224,7 +224,8 @@ Six habits. Most are one line.
 
 - **Before you change something,** read the rules it touches: `npm run rule br-B02`, or ask
   Claude _"what are the rules for tracks?"_.
-- **In code,** cite the rule where you enforce it: `// br-B02: …` or `@see br-B02`.
+- **In code,** cite the rule where you enforce it: `// br-B02: …`, or `br-B02: …` in a
+  function's documentation comment.
 - **In tests,** name each test after its test ID: `it("br-B02.1 1 character is rejected", …)`.
 - **In commits,** name the rules: end the message with `Rules: br-B02`, and put the same line in
   the PR description, since a squash merge keeps only that. Nothing enforces it; `--rule` lists
@@ -293,7 +294,7 @@ scripts/check.sh              one version everywhere; each example's copies matc
 Build the zip, or download it from the repo's releases when there is one:
 
 ```sh
-./scripts/package.sh        # → dist/business-rules-ledger-2.11.0.zip
+./scripts/package.sh        # → dist/business-rules-ledger-2.12.0.zip
 ```
 
 - **Claude apps (claude.ai, Desktop):** upload the zip as a custom skill in Claude's settings,
@@ -370,7 +371,7 @@ and `Scan: business-rules-ledger/assets/ledger-check.ts`, because here the check
 
 ## Versions
 
-The skill is at **2.11.0**. Every ledger states its format (`Format: business-rules-ledger 2.11.0`),
+The skill is at **2.12.0**. Every ledger states its format (`Format: business-rules-ledger 2.12.0`),
 and the skill offers to upgrade an older ledger, listing the changes first. What changed in each
 version is in the changelog at the end of [`SKILL.md`](business-rules-ledger/SKILL.md).
 

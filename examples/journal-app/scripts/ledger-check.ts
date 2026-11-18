@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 /**
  * Checks a business rules ledger against the codebase, lints it, and computes each rule's enforcement.
- * Version 2.11.0 — ships with the business-rules-ledger skill. Reinstall from the skill to update.
+ * Version 2.12.0 — ships with the business-rules-ledger skill. Reinstall from the skill to update.
  *
  * Usage:
  *   npx tsx scripts/ledger-check.ts                         report only
@@ -505,13 +505,15 @@ function stringSpans(text: string): [number, number][] {
   return spans;
 }
 
-// br-C01: an ID followed by a colon, or after @see, cites the rule (authoring rule M12). Any other
-// mention does not. A list ending in a colon cites every ID in it: "br-[X][NN], br-[Y][NN]: ...".
+// br-C01: an ID followed by a colon cites the rule (authoring rule M12). Any other mention does
+// not. A list ending in a colon cites every ID in it: "br-[X][NN], br-[Y][NN]: ...".
 function isCitation(text: string, at: number, length: number) {
-  return (
-    /^(\s*,\s*br-[A-Z]\d{2})*\s*:/.test(text.slice(at + length)) ||
-    /@see\s+$/.test(text.slice(0, at))
-  );
+  return /^(\s*,\s*br-[A-Z]\d{2})*\s*:/.test(text.slice(at + length));
+}
+
+// br-C01: before 2.12.0 an ID after @see cited the rule. It is a mention now, so name the line.
+function isOldSee(text: string, at: number) {
+  return /@see\s+$/.test(text.slice(0, at));
 }
 
 function scanCode() {
@@ -520,6 +522,7 @@ function scanCode() {
   const tests = new Map<string, Set<string>>();
   const testsAt = new Map<string, string[]>();
   const unprefixed: string[] = [];
+  const oldSee: string[] = [];
   const re = /\bbr-([A-Z]\d{2})(\.\d+)?\b/g;
   const bareRe = /(?<![\w-])([A-Z]\d{2}\.\d+)\b/g;
   for (const file of walk(ROOT, [])) {
@@ -538,9 +541,12 @@ function scanCode() {
           if (!testsAt.has(id)) testsAt.set(id, []);
           testsAt.get(id)!.push(where);
         } else {
-          const into = isCitation(text, m.index!, m[0].length)
-            ? citations
-            : mentions;
+          const cites = isCitation(text, m.index!, m[0].length);
+          if (!cites && isOldSee(text, m.index!))
+            oldSee.push(
+              `${where}: @see br-${m[1]} is a mention since 2.12.0, so it does not count. Cite with a colon: br-${m[1]}: (br-M12).`,
+            );
+          const into = cites ? citations : mentions;
           if (!into.has(m[1])) into.set(m[1], []);
           into.get(m[1])!.push(where);
         }
@@ -550,7 +556,7 @@ function scanCode() {
       }
     });
   }
-  return { citations, mentions, tests, testsAt, unprefixed };
+  return { citations, mentions, tests, testsAt, unprefixed, oldSee };
 }
 
 // Test IDs in result names. Tolerates Go's subtest names, where spaces become underscores.
@@ -926,7 +932,7 @@ function main() {
     );
   }
 
-  const { citations, mentions, tests: codeTests, testsAt, unprefixed } = scanCode();
+  const { citations, mentions, tests: codeTests, testsAt, unprefixed, oldSee } = scanCode();
   const docCount = checkDocs(ruleIds, intentIds, areaFiles);
   const ledgerTests = new Set(rules.flatMap((r) => r.tests));
   // br-C10: a listed test named without its prefix is not counted, so say so.
@@ -937,6 +943,7 @@ function main() {
         `${u}: test named ${id} without the br- prefix, so it is not counted. Rename it br-${id} (br-M13).`,
       );
   }
+  warnings.push(...oldSee);
   const passed = RESULTS ? readResults(RESULTS) : null;
 
   // The index is generated from the rule entries (--write). The old one is read only for the
@@ -1293,8 +1300,8 @@ function main() {
   if (mentionCount > 0)
     out.push(
       mentionCount === 1
-        ? "1 mention of a rule in code is not a citation (no colon or @see), so it does not count."
-        : `${mentionCount} mentions of rules in code are not citations (no colon or @see), so they do not count.`,
+        ? "1 mention of a rule in code is not a citation (no colon), so it does not count."
+        : `${mentionCount} mentions of rules in code are not citations (no colon), so they do not count.`,
     );
 
   const todo = settled.filter((r) => !cellFor(r).startsWith("tests pass"));

@@ -11,8 +11,8 @@ describe("citations", () => {
     expect(level(withCode("// br_B01: a colon cites"), "B01")).toBe("linked");
   });
 
-  test("br-C01.2 an ID after @see cites the rule", () => {
-    expect(level(withCode("/** @see br_B01 */"), "B01")).toBe("linked");
+  test("br-C01.2 an ID after @see is only a mention", () => {
+    expect(level(withCode("/** @see br_B01 */"), "B01")).toBe("unlinked");
   });
 
   test("br-C01.3 a list ending in a colon cites every ID in it", () => {
@@ -21,10 +21,23 @@ describe("citations", () => {
     expect(level(dir, "B02")).toBe("linked");
   });
 
-  test("br-C01.4 an ID with no colon or @see is only a mention", () => {
+  test("br-C01.4 an ID with no colon is only a mention", () => {
     const dir = withCode("// explained in br_B01");
     expect(level(dir, "B01")).toBe("unlinked");
     expect(run(dir, "--rule", `${P}B01`).out).toContain("Mentioned, not cited:\n  src/a.ts:1");
+  });
+
+  test("br-C01.5 an ID after @see is a warning naming the line and the colon form", () => {
+    const out = run(withCode("/**\n * @see br_B01 the rule\n */")).out;
+    expect(out).toContain(
+      `src/a.ts:2: @see ${P}B01 is a mention since 2.12.0, so it does not count. Cite with a colon: ${P}B01: (br-M12).`,
+    );
+  });
+
+  test("br-C01.6 an ID after @see and followed by a colon still cites", () => {
+    const dir = withCode("/** @see br_B01: the rule */");
+    expect(level(dir, "B01")).toBe("linked");
+    expect(run(dir).out).not.toContain("is a mention since 2.12.0");
   });
 });
 

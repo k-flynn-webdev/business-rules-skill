@@ -13,7 +13,7 @@ export const STREAK_NOTICE_THRESHOLD = Number(process.env.STREAK_NOTICE_THRESHOL
 
 /**
  * Every streak in a user's tracks, oldest first.
- * @see br-B06 a streak is a run of consecutive days, each with at least one non-deleted track.
+ * br-B06: a streak is a run of consecutive days, each with at least one non-deleted track.
  */
 export function streaksOf(tracks: Track[]): Streak[] {
     // br-B06: deleted tracks never count, and many tracks on one day count as one day.
@@ -31,7 +31,7 @@ export function streaksOf(tracks: Track[]): Streak[] {
 
 /**
  * The length of the open streak, or 0.
- * @see br-B07 the current streak stays open while the latest track is from today or yesterday.
+ * br-B07: the current streak stays open while the latest track is from today or yesterday.
  */
 export function currentStreak(tracks: Track[], today: Day): number {
     const latest = streaksOf(tracks).at(-1);
@@ -42,7 +42,7 @@ export function currentStreak(tracks: Track[], today: Day): number {
 
 /**
  * The length of the longest streak.
- * @see br-B09 the best streak is the longest streak in the user's non-deleted tracks.
+ * br-B09: the best streak is the longest streak in the user's non-deleted tracks.
  */
 export function bestStreak(tracks: Track[]): number {
     return Math.max(0, ...streaksOf(tracks).map((s) => s.length));
@@ -50,7 +50,7 @@ export function bestStreak(tracks: Track[]): number {
 
 /**
  * Whether creating a track should show the streak notification.
- * @see br-B08 when the streak counting the new track is at or above the threshold, show it.
+ * br-B08: when the streak counting the new track is at or above the threshold, show it.
  */
 export function shouldNotify(currentAfterCreate: number, threshold = STREAK_NOTICE_THRESHOLD): boolean {
     return currentAfterCreate >= threshold;

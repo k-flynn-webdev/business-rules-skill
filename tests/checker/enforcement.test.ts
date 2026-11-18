@@ -216,7 +216,7 @@ describe("counts in the report", () => {
   test("br-C23.5 one mention and one document read in the singular", () => {
     const dir = repo({ [LEDGER]: ledger(), "src/a.ts": "// see br_B01", "specs/notes.md": "# Notes\n\nServes in-01.\n" });
     const out = run(dir).out;
-    expect(out).toContain("1 mention of a rule in code is not a citation (no colon or @see), so it does not count.");
+    expect(out).toContain("1 mention of a rule in code is not a citation (no colon), so it does not count.");
     expect(out).toContain("Checked 1 other document beside the ledger for rule and intent IDs.");
   });
 
@@ -228,7 +228,7 @@ describe("counts in the report", () => {
       "specs/b.md": "# B\n\nServes in-01.\n",
     });
     const out = run(dir).out;
-    expect(out).toContain("2 mentions of rules in code are not citations (no colon or @see), so they do not count.");
+    expect(out).toContain("2 mentions of rules in code are not citations (no colon), so they do not count.");
     expect(out).toContain("Checked 2 other documents beside the ledger for rule and intent IDs.");
   });
 

@@ -1,6 +1,6 @@
 ---
 metadata:
-  version: "2.11.0"
+  version: "2.12.0"
 ---
 
 # The Business Rules Ledger
@@ -101,7 +101,7 @@ A checker greps your codebase and works out, for each rule, how far it actually 
 | Level           | Meaning                                                   |
 | --------------- | --------------------------------------------------------- |
 | `unlinked`      | Written down. Nothing in the code cites it.               |
-| `linked`        | Code cites the rule (`br-B03:` or `@see br-B03`).         |
+| `linked`        | Code cites the rule (`br-B03:`).                          |
 | `tests written` | A test named after the rule exists.                       |
 | `tests pass`    | That test ran and passed in the results file you gave it. |
 

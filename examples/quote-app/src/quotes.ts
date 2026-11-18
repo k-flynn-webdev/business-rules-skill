@@ -33,7 +33,7 @@ function isAttributionBlock(block: string): boolean {
 
 /**
  * Reads quotes out of the QUOTES.md format.
- * @see br-D02 A quote entry is `> text` lines, an optional `- Attribution` line, under a `##` heading.
+ * br-D02: A quote entry is `> text` lines, an optional `- Attribution` line, under a `##` heading.
  */
 export function parseQuotes(markdown: string): Quote[] {
   const quotes: Quote[] = [];
@@ -74,7 +74,7 @@ export function parseQuotes(markdown: string): Quote[] {
 
 /**
  * The pool: every quote in QUOTES.md. A missing file is an empty pool, not an error.
- * @see br-B01 QUOTES.md is the canonical source of quotes.
+ * br-B01: QUOTES.md is the canonical source of quotes.
  */
 export function getAllQuotes(file = QUOTES_PATH): Quote[] {
   try {
@@ -86,7 +86,7 @@ export function getAllQuotes(file = QUOTES_PATH): Quote[] {
 
 /**
  * The quote of the day for the UTC date of `now`.
- * @see br-B04 The server chooses the quote of the day from the UTC date.
+ * br-B04: The server chooses the quote of the day from the UTC date.
  */
 export function pickQuoteOfTheDay(quotes: Quote[], now: Date): Quote {
   // br-B05: an empty pool shows the fallback quote, never a blank page.
@@ -100,7 +100,7 @@ export function pickQuoteOfTheDay(quotes: Quote[], now: Date): Quote {
 
 /**
  * A random quote other than `exclude`, unless the pool has only one quote.
- * @see br-B07 `?new_quote=true` shows another quote for that page load only.
+ * br-B07: `?new_quote=true` shows another quote for that page load only.
  */
 export function pickRandomQuote(quotes: Quote[], exclude: Quote): Quote {
   const others = quotes.length > 1 ? quotes.filter((q) => q !== exclude) : quotes;
@@ -111,7 +111,7 @@ export function pickRandomQuote(quotes: Quote[], exclude: Quote): Quote {
 /**
  * The quote a page load shows: the quote of the day, or another one when asked.
  * Nothing about the request is stored, so the next page load is unaffected (br-B06).
- * @see br-B07
+ * br-B07: a page load can ask for another quote.
  */
 export function selectQuote(quotes: Quote[], params: URLSearchParams, now = new Date()): Quote {
   const daily = pickQuoteOfTheDay(quotes, now);

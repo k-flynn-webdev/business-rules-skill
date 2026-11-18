@@ -6,7 +6,7 @@ export const MAX_SHOWN = 2;
 
 /**
  * The same month and day, `years` years before `today`. 29 February falls back to 28 February.
- * @see br-B10 the anniversary date.
+ * br-B10: the anniversary date.
  */
 export function anniversaryDate(today: Day, years = 1): Day {
     const [y, m, d] = today.split("-").map(Number);
@@ -19,7 +19,7 @@ export function anniversaryDate(today: Day, years = 1): Day {
 
 /**
  * The tracks the anniversary card shows for an anniversary date.
- * @see br-B10 up to 2 tracks within ±3 days of the anniversary date, closest first.
+ * br-B10: up to 2 tracks within ±3 days of the anniversary date, closest first.
  */
 export function anniversaryTracks(tracks: Track[], date: Day): Track[] {
     return (

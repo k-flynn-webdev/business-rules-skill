@@ -3,7 +3,7 @@ export type Day = string;
 
 /**
  * The calendar date of an instant in a time zone.
- * @see br-D03 a track's day is the user's calendar date when it was created.
+ * br-D03: a track's day is the user's calendar date when it was created.
  */
 export function localDateOf(instant: Date, timeZone: string): Day {
     // en-CA formats dates as YYYY-MM-DD.
