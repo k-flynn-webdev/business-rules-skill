@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Builds dist/business-rules-ledger-<version>.zip from the skill folder, ready to upload or install.
+# Builds dist/business-rules-ledger-<version>.skill from the skill folder, for the claude.ai skills
+# upload, and the same package as .zip for installing by hand.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 VERSION=$(sed -n 's/^  version: "\(.*\)"$/\1/p' business-rules-ledger/SKILL.md)
@@ -8,4 +9,6 @@ mkdir -p dist
 OUT="dist/business-rules-ledger-$VERSION.zip"
 rm -f "$OUT"
 zip -qr "$OUT" business-rules-ledger -x '*.DS_Store'
+cp "$OUT" "${OUT%.zip}.skill"
+echo "${OUT%.zip}.skill"
 echo "$OUT"

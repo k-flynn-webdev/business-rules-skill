@@ -285,20 +285,20 @@ examples/quote-app/           a ledger written after the app shipped, split into
 specs/BUSINESS-RULES.md       the skill's own ledger: the rules its checker keeps
 specs/lite-spec-checker.md    how the checker's rules fit together, on one page
 tests/checker/                one test per test ID of that ledger (npm ci, then npm run ledger)
-scripts/package.sh            builds dist/business-rules-ledger-<version>.zip
+scripts/package.sh            builds dist/business-rules-ledger-<version>.skill and .zip
 scripts/check.sh              one version everywhere; each example's copies match the assets (--fix syncs)
 ```
 
 ## Install
 
-Build the zip, or download it from the repo's releases when there is one:
+Build the package, or download it from the repo's releases:
 
 ```sh
-./scripts/package.sh        # → dist/business-rules-ledger-2.12.0.zip
+./scripts/package.sh        # → dist/business-rules-ledger-2.12.0.skill and .zip
 ```
 
-- **Claude apps (claude.ai, Desktop):** upload the zip as a custom skill in Claude's settings,
-  under Capabilities.
+- **Claude apps (claude.ai, Desktop):** upload the `.skill` file as a custom skill in Claude's
+  settings, under Capabilities. The upload no longer takes a `.zip`; the two hold the same files.
 - **Claude Code:** copy the `business-rules-ledger` folder into `~/.claude/skills/` for every
   project, or into a project's `.claude/skills/` for that project only.
 
