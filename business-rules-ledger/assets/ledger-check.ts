@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 /**
  * Checks a business rules ledger against the codebase, lints it, and computes each rule's enforcement.
- * Version 2.12.0 — ships with the business-rules-ledger skill. Reinstall from the skill to update.
+ * Version 2.12.1 — ships with the business-rules-ledger skill. Reinstall from the skill to update.
  *
  * Usage:
  *   npx tsx scripts/ledger-check.ts                         report only
@@ -600,7 +600,8 @@ function jestOutcomes(json: any): Outcome[] {
 // Visual Studio TRX, as written by `dotnet test --logger trx` (xUnit, NUnit, MSTest).
 function trxOutcomes(xml: string): Outcome[] {
   const out: Outcome[] = [];
-  for (const m of xml.matchAll(/<UnitTestResult\b[^>]*>/g)) {
+  // A quoted value may hold ">", which XML allows unescaped, so skip quoted strings whole.
+  for (const m of xml.matchAll(/<UnitTestResult\b(?:[^>"']|"[^"]*"|'[^']*')*>/g)) {
     const a = xmlAttrs(m[0]);
     const o = a.outcome ?? "";
     out.push({
@@ -619,8 +620,9 @@ function trxOutcomes(xml: string): Outcome[] {
 // JUnit XML (pytest --junitxml, gotestsum, JunitXml.TestLogger, most CI tools).
 function junitOutcomes(xml: string): Outcome[] {
   const out: Outcome[] = [];
+  // As in trxOutcomes(), a quoted value may hold ">".
   for (const m of xml.matchAll(
-    /<testcase\b([^>]*?)(?:\/>|>([\s\S]*?)<\/testcase>)/g,
+    /<testcase\b((?:[^>"']|"[^"]*"|'[^']*')*?)(?:\/>|>([\s\S]*?)<\/testcase>)/g,
   )) {
     const a = xmlAttrs(m[1]);
     const body = m[2] ?? "";

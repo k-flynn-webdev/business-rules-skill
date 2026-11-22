@@ -99,6 +99,23 @@ describe("reading results", () => {
     expect(level(named({ "r.xml": xml }), "B01", "--results=r.xml")).toBe("tests pass");
   });
 
+  test("br-C06.4 a JUnit test name may hold > and &lt;", () => {
+    // Node's junit reporter escapes < but leaves >, which is valid XML.
+    const xml = `<testsuite><testcase classname="suite" name="${P}B01.1 a &lt;/script> b" /><testcase classname="suite" name="${P}B01.2 a > b"></testcase></testsuite>`;
+    const dir = repo({
+      [LEDGER]: ledger({ rules: [rule("B01", { tests: ["B01.1", "B01.2"] })] }),
+      "src/a.ts": cite,
+      "src/a.test.ts": [testLine("B01.1"), testLine("B01.2")].join("\n"),
+      "r.xml": xml,
+    });
+    expect(level(dir, "B01", "--results=r.xml")).toBe("tests pass");
+  });
+
+  test("br-C06.5 a TRX test name may hold >", () => {
+    const trx = `<TestRun><Results><UnitTestResult testName="${P}B01.1 a > b" outcome="Passed" /></Results></TestRun>`;
+    expect(level(named({ "r.trx": trx }), "B01", "--results=r.trx")).toBe("tests pass");
+  });
+
   test("br-C06.3 a directory is read by content, other JSON ignored", () => {
     const dir = named({ "results/vitest.json": passedJson("B01.1"), "results/package.json": '{ "name": "x" }' });
     expect(level(dir, "B01", "--results=results")).toBe("tests pass");

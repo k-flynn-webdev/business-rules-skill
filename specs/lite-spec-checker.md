@@ -136,3 +136,4 @@ run, without `--area`, still fails on any error anywhere.
 - 2026-11-03: `--rule` lists the rule's commits, and the skill recommends a `Rules:` trailer
   (2.11.0).
 - 2026-11-19: the colon is the one way to cite; `@see` is a mention, warned about (2.12.0).
+- 2026-11-22: a test name holding `>` is read from JUnit and TRX results (2.12.1).
