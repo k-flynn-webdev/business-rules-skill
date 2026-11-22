@@ -2,7 +2,7 @@
 
 Source of truth. Code and tests conform to this document.
 How to read it, cite it in code and write it: [`BUSINESS-RULES-AUTHORING.md`](BUSINESS-RULES-AUTHORING.md).
-Format: business-rules-ledger 2.12.0
+Format: business-rules-ledger 2.12.1
 Ignore: examples/
 Scan: business-rules-ledger/assets/ledger-check.ts
 
@@ -339,6 +339,8 @@ When the checker is given results, then it reads Jest or Vitest JSON, TRX and JU
 - C06.1 — Given a TRX file where br-C01.1 passed. When the checker reads it. Then C01.1 has passed.
 - C06.2 — Given a JUnit XML file where br-C01.1 passed. When the checker reads it. Then C01.1 has passed.
 - C06.3 — Given a directory holding a Vitest JSON results file and a package.json. When the checker reads the directory. Then it reads the results and ignores package.json.
+- C06.4 — Given a JUnit XML file where br-C01.1 is named `a &lt;/script> b` and br-C01.2 is named `a > b`, both passed. When the checker reads it. Then both have passed.
+- C06.5 — Given a TRX file where br-C01.1 is named `a > b` and passed. When the checker reads it. Then C01.1 has passed.
 
 > Fails if passing results in a supported format do not make their tests pass.
 
@@ -346,6 +348,7 @@ When the checker is given results, then it reads Jest or Vitest JSON, TRX and JU
 
 - 2026-10-22, observed: `ledger-check.ts` readResults(), trxOutcomes(), junitOutcomes() and jestOutcomes().
 - 2026-10-25, intent review. Intended, confirmed with the citation, test and results rules: these definitions are what make enforcement computed rather than claimed.
+- 2026-11-22, bug report: a test name holding `>` dropped out of JUnit results, and in TRX lost the outcome after it, so it counted as failed. Node's junit reporter leaves `>` unescaped, which XML allows. Both readers now skip quoted attribute values whole (2.12.1).
 - 2026-11-19, owner: one way to link a rule in code, one in tests, and plain mentions for everything else. "Keep things simple." `@see` stops citing; the colon works in a documentation comment too. A leftover `@see` is warned about, so no citation is lost silently in the upgrade. Implements br-M12 (2.12.0).
 
 ---
